@@ -1,0 +1,46 @@
+# GreenBlog .gitignore file
+
+# Database files
+/data/*.db
+/data/greenblog.db
+/data/backup/
+
+# Configuration with real values
+# Uncomment the line below if you want to exclude the config file after setup
+# /includes/config.php
+
+# User uploads
+/public_html/uploads/*
+!/public_html/uploads/.gitkeep
+
+# Generated static files
+/public_html/static/*
+!/public_html/static/.gitkeep
+
+# Logs
+/logs/
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Composer dependencies
+/vendor/

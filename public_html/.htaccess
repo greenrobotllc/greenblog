@@ -1,0 +1,23 @@
+# Enable rewrite engine
+RewriteEngine On
+
+# Redirect to static files if they exist
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/static%{REQUEST_URI} -f
+RewriteRule ^(.*)$ /static/$1 [L]
+
+# Handle pagination
+RewriteRule ^page/([0-9]+)/?$ /index.php?page=$1 [L]
+
+# Handle categories
+RewriteRule ^category/([^/]+)/?$ /index.php?category=$1 [L]
+
+# Handle archives
+RewriteRule ^archive/([0-9]{4})/([0-9]{2})/?$ /index.php?year=$1&month=$2 [L]
+RewriteRule ^archive/([0-9]{4})/?$ /index.php?year=$1 [L]
+
+# Handle posts
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([^/]+)/?$ /index.php?post=$1 [L]

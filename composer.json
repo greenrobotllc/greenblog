@@ -1,0 +1,25 @@
+{
+    "name": "greenblog/greenblog",
+    "description": "A lightweight, secure, and fast blogging platform that generates static HTML files",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "GreenBlog Team",
+            "email": "info@greenblog.example.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "adodb/adodb-php": "^5.22"
+    },
+    "autoload": {
+        "files": [
+            "includes/config.php",
+            "includes/db.php",
+            "includes/functions.php",
+            "includes/auth.php",
+            "includes/static-generator.php"
+        ]
+    }
+}
