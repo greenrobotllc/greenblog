@@ -16,12 +16,101 @@ define('BASE_PATH', dirname(__DIR__));
 // Define GREENBLOG constant to allow includes
 define('GREENBLOG', true);
 
+// Check if Composer dependencies are installed
+if (!file_exists(BASE_PATH . '/vendor/autoload.php')) {
+    die('<h1>Composer Dependencies Missing</h1>'
+        . '<p>Composer dependencies have not been installed. Please run the following command from the project root:</p>'
+        . '<pre>composer install</pre>'
+        . '<p>Project root: <code>' . htmlspecialchars(BASE_PATH) . '</code></p>');
+}
+
 // Check if already installed
 if (file_exists(BASE_PATH . '/data/greenblog.db') && file_exists(BASE_PATH . '/includes/config.php')) {
     // Check if config file indicates installation is complete
     include BASE_PATH . '/includes/config.php';
     if (defined('INSTALLED') && INSTALLED === true) {
         die('GreenBlog is already installed. If you want to reinstall, please delete the data/greenblog.db file and the includes/config.php file.');
+    }
+}
+
+// Run requirements checks
+$requirements = [];
+
+// PHP version
+$phpVersionOk = version_compare(PHP_VERSION, '7.4.0', '>=');
+$requirements[] = [
+    'name' => 'PHP Version',
+    'required' => '>= 7.4',
+    'current' => PHP_VERSION,
+    'passed' => $phpVersionOk,
+];
+
+// SQLite3 extension
+$sqliteOk = extension_loaded('sqlite3');
+$requirements[] = [
+    'name' => 'SQLite3 Extension',
+    'required' => 'Enabled',
+    'current' => $sqliteOk ? 'Enabled' : 'Not installed',
+    'passed' => $sqliteOk,
+];
+
+// PDO SQLite extension (optional)
+$pdoSqliteOk = extension_loaded('pdo_sqlite');
+$requirements[] = [
+    'name' => 'PDO SQLite Extension',
+    'required' => 'Optional',
+    'current' => $pdoSqliteOk ? 'Enabled' : 'Not installed',
+    'passed' => $pdoSqliteOk,
+    'optional' => true,
+];
+
+// mbstring extension
+$mbstringOk = extension_loaded('mbstring');
+$requirements[] = [
+    'name' => 'mbstring Extension',
+    'required' => 'Enabled',
+    'current' => $mbstringOk ? 'Enabled' : 'Not installed',
+    'passed' => $mbstringOk,
+    'optional' => true,
+];
+
+// Composer dependencies
+$composerOk = file_exists(BASE_PATH . '/vendor/autoload.php');
+$requirements[] = [
+    'name' => 'Composer Dependencies',
+    'required' => 'Installed',
+    'current' => $composerOk ? 'Installed' : 'Not installed — run: composer install',
+    'passed' => $composerOk,
+];
+
+// Data directory writable
+$dataDir = BASE_PATH . '/data';
+$dataDirExists = file_exists($dataDir);
+$dataDirWritable = $dataDirExists && is_writable($dataDir);
+$requirements[] = [
+    'name' => 'Data Directory Writable',
+    'required' => 'Writable',
+    'current' => !$dataDirExists ? 'Does not exist' : ($dataDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $dataDir),
+    'passed' => $dataDirWritable,
+];
+
+// Includes directory writable (config.php will be created here)
+$includesDir = BASE_PATH . '/includes';
+$includesDirExists = file_exists($includesDir);
+$includesDirWritable = $includesDirExists && is_writable($includesDir);
+$requirements[] = [
+    'name' => 'Includes Directory Writable',
+    'required' => 'Writable',
+    'current' => !$includesDirExists ? 'Does not exist' : ($includesDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $includesDir),
+    'passed' => $includesDirWritable,
+];
+
+// Determine if all required checks pass
+$allRequiredPassed = true;
+foreach ($requirements as $req) {
+    if (empty($req['optional']) && !$req['passed']) {
+        $allRequiredPassed = false;
+        break;
     }
 }
 
@@ -79,9 +168,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!mkdir(BASE_PATH . '/data', 0755, true)) {
                     throw new Exception("Failed to create data directory: " . BASE_PATH . '/data');
                 }
-                echo "<p>Created data directory</p>";
-            } else {
-                echo "<p>Data directory already exists</p>";
+            }
+
+            // Ensure data directory is writable
+            if (!is_writable(BASE_PATH . '/data')) {
+                throw new Exception("Data directory is not writable: " . BASE_PATH . '/data' . ". Please run: chmod 775 " . BASE_PATH . '/data');
             }
 
             // Create uploads directory if it doesn't exist
@@ -89,9 +180,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!mkdir(__DIR__ . '/uploads', 0755, true)) {
                     throw new Exception("Failed to create uploads directory: " . __DIR__ . '/uploads');
                 }
-                echo "<p>Created uploads directory</p>";
-            } else {
-                echo "<p>Uploads directory already exists</p>";
             }
 
             // Create static directory if it doesn't exist
@@ -99,47 +187,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!mkdir(__DIR__ . '/static', 0755, true)) {
                     throw new Exception("Failed to create static directory: " . __DIR__ . '/static');
                 }
-                echo "<p>Created static directory</p>";
-            } else {
-                echo "<p>Static directory already exists</p>";
+            }
+
+            // Check if SQLite3 extension is loaded
+            if (!extension_loaded('sqlite3')) {
+                throw new Exception("SQLite3 extension is not loaded. Please enable it in your PHP configuration.");
             }
 
             // Include ADODB
             require_once BASE_PATH . '/vendor/adodb/adodb-php/adodb.inc.php';
 
-            echo "<p>ADODB included successfully</p>";
-
-            // Check if SQLite3 extension is loaded
-            echo "<p>PHP Version: " . phpversion() . "</p>";
-            echo "<p>Loaded Extensions: </p><pre>";
-            print_r(get_loaded_extensions());
-            echo "</pre>";
-
-            if (!extension_loaded('sqlite3')) {
-                throw new Exception("SQLite3 extension is not loaded. Please enable it in your PHP configuration.");
-            }
-            echo "<p>SQLite3 extension is loaded</p>";
-
-            // Check if PDO SQLite is available as an alternative
-            if (extension_loaded('pdo_sqlite')) {
-                echo "<p>PDO SQLite extension is also loaded</p>";
-            }
-
             // Create database connection
-            echo "<p>Attempting to create database connection with sqlite3 driver</p>";
             $conn = ADONewConnection('sqlite3');
             if (!$conn) {
                 throw new Exception("Failed to create ADONewConnection with sqlite3 driver");
             }
 
             $dbPath = BASE_PATH . '/data/greenblog.db';
-            echo "<p>Connecting to database at: " . $dbPath . "</p>";
 
             if (!$conn->Connect($dbPath)) {
-                throw new Exception("Failed to connect to database: " . $conn->ErrorMsg());
+                throw new Exception("Unable to open database: " . $conn->ErrorMsg());
             }
-
-            echo "<p>Database connection successful</p>";
 
             // Create tables
             $conn->Execute("
@@ -220,32 +288,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->Execute("INSERT INTO settings (key, value) VALUES ('excerpt_length', '150')");
 
             // Create config file
-            echo "<p>Creating config file</p>";
             $configPath = BASE_PATH . '/includes/config.php';
+            $escapedSiteTitle = addslashes($siteName);
+            $escapedSiteDesc = addslashes($siteDescription);
+            $escapedSiteUrl = addslashes($siteUrl);
+            $escapedAdminEmail = addslashes($adminEmail);
 
-            if (!file_exists($configPath)) {
-                throw new Exception("Config template file does not exist: " . $configPath);
-            }
+            $configContent = <<<PHP
+<?php
+/**
+ * GreenBlog Configuration File
+ *
+ * Generated during setup. Do not edit manually.
+ */
 
-            $configTemplate = file_get_contents($configPath);
-            if ($configTemplate === false) {
-                throw new Exception("Failed to read config template file: " . $configPath);
-            }
+// Prevent direct access
+if (!defined('GREENBLOG')) {
+    die('Direct access not permitted');
+}
 
-            echo "<p>Config template loaded successfully</p>";
+// Database configuration
+define('DB_PATH', __DIR__ . '/../data/greenblog.db');
+define('DB_TYPE', 'sqlite3');
 
-            $configContent = str_replace('{{SITE_TITLE}}', $siteName, $configTemplate);
-            $configContent = str_replace('{{SITE_DESCRIPTION}}', $siteDescription, $configContent);
-            $configContent = str_replace('{{SITE_URL}}', $siteUrl, $configContent);
-            $configContent = str_replace('{{ADMIN_EMAIL}}', $adminEmail, $configContent);
+// Site configuration
+define('SITE_TITLE', '{$escapedSiteTitle}');
+define('SITE_DESCRIPTION', '{$escapedSiteDesc}');
+define('SITE_URL', '{$escapedSiteUrl}');
+define('ADMIN_EMAIL', '{$escapedAdminEmail}');
 
-            echo "<p>Config content prepared</p>";
+// File paths
+define('ROOT_DIR', realpath(__DIR__ . '/..'));
+define('PUBLIC_DIR', ROOT_DIR . '/public_html');
+define('ADMIN_DIR', PUBLIC_DIR . '/admin');
+define('INCLUDES_DIR', ROOT_DIR . '/includes');
+define('TEMPLATES_DIR', ROOT_DIR . '/templates');
+define('STATIC_DIR', PUBLIC_DIR . '/static');
+define('UPLOADS_DIR', PUBLIC_DIR . '/uploads');
+define('ASSETS_DIR', PUBLIC_DIR . '/assets');
+
+// Static file generation settings
+define('POSTS_PER_PAGE', 10);
+define('ENABLE_CACHE', true);
+define('CACHE_DURATION', 3600);
+
+// Security settings
+define('HASH_ALGO', 'PASSWORD_BCRYPT');
+define('SESSION_DURATION', 3600);
+define('MAX_LOGIN_ATTEMPTS', 5);
+define('LOGIN_TIMEOUT', 300);
+
+// Installation status
+define('INSTALLED', true);
+
+// Version
+define('VERSION', '1.0.0');
+PHP;
 
             if (file_put_contents($configPath, $configContent) === false) {
                 throw new Exception("Failed to write config file: " . $configPath);
             }
-
-            echo "<p>Config file written successfully</p>";
 
             // Installation successful
             $success = true;
@@ -316,6 +418,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button:hover {
             background-color: #1e6e2e;
         }
+        .requirements-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .requirements-table th,
+        .requirements-table td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .requirements-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .status-pass {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status-fail {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .status-warn {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .requirements-summary {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .requirements-ok {
+            color: #27ae60;
+            background-color: #d4efdf;
+        }
+        .requirements-fail {
+            color: #e74c3c;
+            background-color: #fadbd8;
+        }
     </style>
 </head>
 <body>
@@ -327,6 +469,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p><a href="admin/login.php">Click here to login</a> to your new blog.</p>
         </div>
     <?php else: ?>
+        <h2>System Requirements</h2>
+        <table class="requirements-table">
+            <thead>
+                <tr>
+                    <th>Requirement</th>
+                    <th>Required</th>
+                    <th>Current</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($requirements as $req): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($req['name']); ?></td>
+                    <td><?php echo htmlspecialchars($req['required']); ?></td>
+                    <td><?php echo htmlspecialchars($req['current']); ?></td>
+                    <td>
+                        <?php if ($req['passed']): ?>
+                            <span class="status-pass">Pass</span>
+                        <?php elseif (!empty($req['optional'])): ?>
+                            <span class="status-warn">Warning</span>
+                        <?php else: ?>
+                            <span class="status-fail">Fail</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <?php if (!$allRequiredPassed): ?>
+            <div class="requirements-summary requirements-fail">
+                <p>Some required checks have failed. Please fix the issues above before installing.</p>
+            </div>
+        <?php else: ?>
+            <div class="requirements-summary requirements-ok">
+                <p>All requirements met. You are ready to install GreenBlog.</p>
+            </div>
+        <?php endif; ?>
+
         <?php if (!empty($errors)): ?>
             <div class="error">
                 <ul>
@@ -337,6 +519,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
 
+        <?php if ($allRequiredPassed): ?>
         <form method="post" action="">
             <h2>Site Information</h2>
 
@@ -362,6 +545,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <button type="submit">Install GreenBlog</button>
         </form>
+        <?php endif; ?>
     <?php endif; ?>
 </body>
 </html>
