@@ -52,7 +52,7 @@ function startSecureSession() {
  * @return string Hashed password
  */
 function hashPassword($password) {
-    return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+    return password_hash($password, HASH_ALGO, ['cost' => 12]);
 }
 
 /**

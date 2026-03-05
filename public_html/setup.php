@@ -16,12 +16,153 @@ define('BASE_PATH', dirname(__DIR__));
 // Define GREENBLOG constant to allow includes
 define('GREENBLOG', true);
 
+// Check if Composer dependencies are installed
+$composerAutoloadExists = file_exists(BASE_PATH . '/vendor/autoload.php');
+
 // Check if already installed
-if (file_exists(BASE_PATH . '/data/greenblog.db') && file_exists(BASE_PATH . '/includes/config.php')) {
+if ($composerAutoloadExists && file_exists(BASE_PATH . '/data/greenblog.db') && file_exists(BASE_PATH . '/includes/config.php')) {
     // Check if config file indicates installation is complete
     include BASE_PATH . '/includes/config.php';
     if (defined('INSTALLED') && INSTALLED === true) {
         die('GreenBlog is already installed. If you want to reinstall, please delete the data/greenblog.db file and the includes/config.php file.');
+    }
+}
+
+// Run requirements checks
+$requirements = [];
+
+// PHP version
+$phpVersionOk = version_compare(PHP_VERSION, '7.4.0', '>=');
+$requirements[] = [
+    'name' => 'PHP Version',
+    'required' => '>= 7.4',
+    'current' => PHP_VERSION,
+    'passed' => $phpVersionOk,
+];
+
+// SQLite3 extension
+$sqliteOk = extension_loaded('sqlite3');
+$requirements[] = [
+    'name' => 'SQLite3 Extension',
+    'required' => 'Enabled',
+    'current' => $sqliteOk ? 'Enabled' : 'Not installed',
+    'passed' => $sqliteOk,
+];
+
+// PDO SQLite extension (optional)
+$pdoSqliteOk = extension_loaded('pdo_sqlite');
+$requirements[] = [
+    'name' => 'PDO SQLite Extension',
+    'required' => 'Optional',
+    'current' => $pdoSqliteOk ? 'Enabled' : 'Not installed',
+    'passed' => $pdoSqliteOk,
+    'optional' => true,
+];
+
+// mbstring extension
+$mbstringOk = extension_loaded('mbstring');
+$requirements[] = [
+    'name' => 'mbstring Extension',
+    'required' => 'Enabled',
+    'current' => $mbstringOk ? 'Enabled' : 'Not installed',
+    'passed' => $mbstringOk,
+    'optional' => true,
+];
+
+// Composer dependencies
+$requirements[] = [
+    'name' => 'Composer Dependencies',
+    'required' => 'Installed',
+    'current' => $composerAutoloadExists ? 'Installed' : 'Not installed — run: composer install',
+    'passed' => $composerAutoloadExists,
+];
+
+// Data directory writable
+$dataDir = BASE_PATH . '/data';
+$dataDirIsDir = is_dir($dataDir);
+$dataDirBlockedByFile = !$dataDirIsDir && file_exists($dataDir);
+$dataDirWritable = $dataDirIsDir && is_writable($dataDir);
+$dataDirCreatable = !file_exists($dataDir) && is_writable(dirname($dataDir));
+if ($dataDirBlockedByFile) {
+    $dataDirCurrent = 'Exists but is not a directory — remove or convert to directory';
+} elseif (!$dataDirIsDir) {
+    $dataDirCurrent = $dataDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($dataDir);
+} else {
+    $dataDirCurrent = $dataDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $dataDir;
+}
+$requirements[] = [
+    'name' => 'Data Directory Writable',
+    'required' => 'Writable',
+    'current' => $dataDirCurrent,
+    'passed' => $dataDirWritable || $dataDirCreatable,
+];
+
+// Includes directory writable (config.php will be created here)
+$includesDir = BASE_PATH . '/includes';
+$includesDirIsDir = is_dir($includesDir);
+$includesDirBlockedByFile = !$includesDirIsDir && file_exists($includesDir);
+$includesDirWritable = $includesDirIsDir && is_writable($includesDir);
+$includesDirCreatable = !file_exists($includesDir) && is_writable(dirname($includesDir));
+if ($includesDirBlockedByFile) {
+    $includesDirCurrent = 'Exists but is not a directory — remove or convert to directory';
+} elseif (!$includesDirIsDir) {
+    $includesDirCurrent = $includesDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($includesDir);
+} else {
+    $includesDirCurrent = $includesDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $includesDir;
+}
+$requirements[] = [
+    'name' => 'Includes Directory Writable',
+    'required' => 'Writable',
+    'current' => $includesDirCurrent,
+    'passed' => $includesDirWritable || $includesDirCreatable,
+];
+
+// Uploads directory writable
+$uploadsDir = __DIR__ . '/uploads';
+$uploadsDirIsDir = is_dir($uploadsDir);
+$uploadsDirBlockedByFile = !$uploadsDirIsDir && file_exists($uploadsDir);
+$uploadsDirWritable = $uploadsDirIsDir && is_writable($uploadsDir);
+$uploadsDirCreatable = !file_exists($uploadsDir) && is_writable(dirname($uploadsDir));
+if ($uploadsDirBlockedByFile) {
+    $uploadsDirCurrent = 'Exists but is not a directory — remove or convert to directory';
+} elseif (!$uploadsDirIsDir) {
+    $uploadsDirCurrent = $uploadsDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($uploadsDir);
+} else {
+    $uploadsDirCurrent = $uploadsDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $uploadsDir;
+}
+$requirements[] = [
+    'name' => 'Uploads Directory Writable',
+    'required' => 'Writable',
+    'current' => $uploadsDirCurrent,
+    'passed' => $uploadsDirWritable || $uploadsDirCreatable,
+];
+
+// Static directory writable
+$staticDir = __DIR__ . '/static';
+$staticDirIsDir = is_dir($staticDir);
+$staticDirBlockedByFile = !$staticDirIsDir && file_exists($staticDir);
+$staticDirWritable = $staticDirIsDir && is_writable($staticDir);
+$staticDirCreatable = !file_exists($staticDir) && is_writable(dirname($staticDir));
+if ($staticDirBlockedByFile) {
+    $staticDirCurrent = 'Exists but is not a directory — remove or convert to directory';
+} elseif (!$staticDirIsDir) {
+    $staticDirCurrent = $staticDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($staticDir);
+} else {
+    $staticDirCurrent = $staticDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $staticDir;
+}
+$requirements[] = [
+    'name' => 'Static Directory Writable',
+    'required' => 'Writable',
+    'current' => $staticDirCurrent,
+    'passed' => $staticDirWritable || $staticDirCreatable,
+];
+
+// Determine if all required checks pass
+$allRequiredPassed = true;
+foreach ($requirements as $req) {
+    if (empty($req['optional']) && !$req['passed']) {
+        $allRequiredPassed = false;
+        break;
     }
 }
 
@@ -30,6 +171,12 @@ $errors = [];
 $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Server-side readiness guard: abort if required checks have not passed
+    if (!$allRequiredPassed) {
+        http_response_code(400);
+        $errors[] = 'Installation prerequisites are not met. Please resolve all failed requirements before installing.';
+    }
+
     // Validate inputs
     $siteName = trim($_POST['site_name'] ?? '');
     $siteDescription = trim($_POST['site_description'] ?? '');
@@ -75,182 +222,242 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         try {
             // Create data directory if it doesn't exist
-            if (!file_exists(BASE_PATH . '/data')) {
-                if (!mkdir(BASE_PATH . '/data', 0755, true)) {
-                    throw new Exception("Failed to create data directory: " . BASE_PATH . '/data');
+            $dataPath = BASE_PATH . '/data';
+            if (file_exists($dataPath) && !is_dir($dataPath)) {
+                throw new Exception("Path exists but is not a directory: " . $dataPath);
+            }
+            if (!is_dir($dataPath)) {
+                if (!mkdir($dataPath, 0755, true)) {
+                    throw new Exception("Failed to create data directory: " . $dataPath);
                 }
-                echo "<p>Created data directory</p>";
-            } else {
-                echo "<p>Data directory already exists</p>";
+            }
+
+            // Ensure data directory is writable
+            if (!is_writable($dataPath)) {
+                throw new Exception("Data directory is not writable: " . $dataPath . ". Please run: chmod 775 " . $dataPath);
             }
 
             // Create uploads directory if it doesn't exist
-            if (!file_exists(__DIR__ . '/uploads')) {
-                if (!mkdir(__DIR__ . '/uploads', 0755, true)) {
-                    throw new Exception("Failed to create uploads directory: " . __DIR__ . '/uploads');
+            $uploadsPath = __DIR__ . '/uploads';
+            if (file_exists($uploadsPath) && !is_dir($uploadsPath)) {
+                throw new Exception("Path exists but is not a directory: " . $uploadsPath);
+            }
+            if (!is_dir($uploadsPath)) {
+                if (!mkdir($uploadsPath, 0755, true)) {
+                    throw new Exception("Failed to create uploads directory: " . $uploadsPath);
                 }
-                echo "<p>Created uploads directory</p>";
-            } else {
-                echo "<p>Uploads directory already exists</p>";
             }
 
             // Create static directory if it doesn't exist
-            if (!file_exists(__DIR__ . '/static')) {
-                if (!mkdir(__DIR__ . '/static', 0755, true)) {
-                    throw new Exception("Failed to create static directory: " . __DIR__ . '/static');
+            $staticPath = __DIR__ . '/static';
+            if (file_exists($staticPath) && !is_dir($staticPath)) {
+                throw new Exception("Path exists but is not a directory: " . $staticPath);
+            }
+            if (!is_dir($staticPath)) {
+                if (!mkdir($staticPath, 0755, true)) {
+                    throw new Exception("Failed to create static directory: " . $staticPath);
                 }
-                echo "<p>Created static directory</p>";
-            } else {
-                echo "<p>Static directory already exists</p>";
+            }
+
+            // Check if SQLite3 extension is loaded
+            if (!extension_loaded('sqlite3')) {
+                throw new Exception("SQLite3 extension is not loaded. Please enable it in your PHP configuration.");
             }
 
             // Include ADODB
             require_once BASE_PATH . '/vendor/adodb/adodb-php/adodb.inc.php';
 
-            echo "<p>ADODB included successfully</p>";
-
-            // Check if SQLite3 extension is loaded
-            echo "<p>PHP Version: " . phpversion() . "</p>";
-            echo "<p>Loaded Extensions: </p><pre>";
-            print_r(get_loaded_extensions());
-            echo "</pre>";
-
-            if (!extension_loaded('sqlite3')) {
-                throw new Exception("SQLite3 extension is not loaded. Please enable it in your PHP configuration.");
-            }
-            echo "<p>SQLite3 extension is loaded</p>";
-
-            // Check if PDO SQLite is available as an alternative
-            if (extension_loaded('pdo_sqlite')) {
-                echo "<p>PDO SQLite extension is also loaded</p>";
-            }
-
             // Create database connection
-            echo "<p>Attempting to create database connection with sqlite3 driver</p>";
             $conn = ADONewConnection('sqlite3');
             if (!$conn) {
                 throw new Exception("Failed to create ADONewConnection with sqlite3 driver");
             }
 
             $dbPath = BASE_PATH . '/data/greenblog.db';
-            echo "<p>Connecting to database at: " . $dbPath . "</p>";
 
             if (!$conn->Connect($dbPath)) {
-                throw new Exception("Failed to connect to database: " . $conn->ErrorMsg());
+                throw new Exception("Unable to open database: " . $conn->ErrorMsg());
             }
 
-            echo "<p>Database connection successful</p>";
+            // Helper to execute SQL with error checking
+            $execSql = function ($sql, $params = false) use ($conn) {
+                $result = $conn->Execute($sql, $params);
+                if ($result === false) {
+                    throw new Exception("SQL error: " . $conn->ErrorMsg());
+                }
+                return $result;
+            };
 
-            // Create tables
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL UNIQUE,
-                    password TEXT NOT NULL,
-                    email TEXT NOT NULL,
-                    role TEXT NOT NULL DEFAULT 'admin',
-                    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    last_login DATETIME,
-                    login_attempts INTEGER DEFAULT 0,
-                    last_login_attempt DATETIME
-                )
-            ");
+            // Run all DB operations inside a transaction
+            $conn->BeginTrans();
 
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS posts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    slug TEXT NOT NULL UNIQUE,
-                    content TEXT NOT NULL,
-                    excerpt TEXT,
-                    status TEXT NOT NULL DEFAULT 'draft',
-                    author_id INTEGER NOT NULL,
-                    featured_image TEXT,
-                    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    published_date DATETIME,
-                    FOREIGN KEY (author_id) REFERENCES users(id)
-                )
-            ");
+            try {
+                // Create tables
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL UNIQUE,
+                        password TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        role TEXT NOT NULL DEFAULT 'admin',
+                        created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        last_login DATETIME,
+                        login_attempts INTEGER DEFAULT 0,
+                        last_login_attempt DATETIME
+                    )
+                ");
 
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS categories (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    slug TEXT NOT NULL UNIQUE,
-                    description TEXT
-                )
-            ");
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS posts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        slug TEXT NOT NULL UNIQUE,
+                        content TEXT NOT NULL,
+                        excerpt TEXT,
+                        status TEXT NOT NULL DEFAULT 'draft',
+                        author_id INTEGER NOT NULL,
+                        featured_image TEXT,
+                        created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        published_date DATETIME,
+                        FOREIGN KEY (author_id) REFERENCES users(id)
+                    )
+                ");
 
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS post_categories (
-                    post_id INTEGER NOT NULL,
-                    category_id INTEGER NOT NULL,
-                    PRIMARY KEY (post_id, category_id),
-                    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-                    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
-                )
-            ");
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        slug TEXT NOT NULL UNIQUE,
+                        description TEXT
+                    )
+                ");
 
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
-                )
-            ");
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS post_categories (
+                        post_id INTEGER NOT NULL,
+                        category_id INTEGER NOT NULL,
+                        PRIMARY KEY (post_id, category_id),
+                        FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+                    )
+                ");
 
-            // Create admin user
-            $hashedPassword = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
-            $conn->Execute(
-                "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'admin')",
-                [$adminUsername, $hashedPassword, $adminEmail]
-            );
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL
+                    )
+                ");
 
-            // Create default category
-            $conn->Execute(
-                "INSERT INTO categories (name, slug, description) VALUES ('Uncategorized', 'uncategorized', 'Default category')"
-            );
+                // Create admin user
+                $hashedPassword = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+                $execSql(
+                    "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'admin')",
+                    [$adminUsername, $hashedPassword, $adminEmail]
+                );
 
-            // Create settings
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('site_title', ?)", [$siteName]);
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('site_description', ?)", [$siteDescription]);
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('site_url', ?)", [$siteUrl]);
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('admin_email', ?)", [$adminEmail]);
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('posts_per_page', '10')");
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('excerpt_length', '150')");
+                // Create default category
+                $execSql(
+                    "INSERT INTO categories (name, slug, description) VALUES ('Uncategorized', 'uncategorized', 'Default category')"
+                );
 
-            // Create config file
-            echo "<p>Creating config file</p>";
-            $configPath = BASE_PATH . '/includes/config.php';
+                // Create settings
+                $execSql("INSERT INTO settings (key, value) VALUES ('site_title', ?)", [$siteName]);
+                $execSql("INSERT INTO settings (key, value) VALUES ('site_description', ?)", [$siteDescription]);
+                $execSql("INSERT INTO settings (key, value) VALUES ('site_url', ?)", [$siteUrl]);
+                $execSql("INSERT INTO settings (key, value) VALUES ('admin_email', ?)", [$adminEmail]);
+                $execSql("INSERT INTO settings (key, value) VALUES ('posts_per_page', '10')");
+                $execSql("INSERT INTO settings (key, value) VALUES ('excerpt_length', '150')");
 
-            if (!file_exists($configPath)) {
-                throw new Exception("Config template file does not exist: " . $configPath);
+                // Ensure includes directory exists
+                $includesPath = BASE_PATH . '/includes';
+                if (!is_dir($includesPath)) {
+                    if (!mkdir($includesPath, 0755, true)) {
+                        throw new Exception("Failed to create includes directory: " . $includesPath);
+                    }
+                }
+
+                // Create config file
+                $configPath = $includesPath . '/config.php';
+                $escapedSiteTitle = addslashes($siteName);
+                $escapedSiteDesc = addslashes($siteDescription);
+                $escapedSiteUrl = addslashes($siteUrl);
+                $escapedAdminEmail = addslashes($adminEmail);
+
+                $configContent = <<<PHP
+<?php
+/**
+ * GreenBlog Configuration File
+ *
+ * Generated during setup. Do not edit manually.
+ */
+
+// Prevent direct access
+if (!defined('GREENBLOG')) {
+    die('Direct access not permitted');
+}
+
+// Database configuration
+define('DB_PATH', __DIR__ . '/../data/greenblog.db');
+define('DB_TYPE', 'sqlite3');
+
+// Site configuration
+define('SITE_TITLE', '{$escapedSiteTitle}');
+define('SITE_DESCRIPTION', '{$escapedSiteDesc}');
+define('SITE_URL', '{$escapedSiteUrl}');
+define('ADMIN_EMAIL', '{$escapedAdminEmail}');
+
+// File paths
+define('ROOT_DIR', realpath(__DIR__ . '/..'));
+define('PUBLIC_DIR', ROOT_DIR . '/public_html');
+define('ADMIN_DIR', PUBLIC_DIR . '/admin');
+define('INCLUDES_DIR', ROOT_DIR . '/includes');
+define('TEMPLATES_DIR', ROOT_DIR . '/templates');
+define('STATIC_DIR', PUBLIC_DIR . '/static');
+define('UPLOADS_DIR', PUBLIC_DIR . '/uploads');
+define('ASSETS_DIR', PUBLIC_DIR . '/assets');
+
+// Static file generation settings
+define('POSTS_PER_PAGE', 10);
+define('ENABLE_CACHE', true);
+define('CACHE_DURATION', 3600);
+
+// Security settings
+define('HASH_ALGO', PASSWORD_BCRYPT);
+define('SESSION_DURATION', 3600);
+define('MAX_LOGIN_ATTEMPTS', 5);
+define('LOGIN_TIMEOUT', 300);
+
+// Installation status
+define('INSTALLED', true);
+
+// Version
+define('VERSION', '1.0.0');
+PHP;
+
+                if (file_put_contents($configPath, $configContent) === false) {
+                    throw new Exception("Failed to write config file: " . $configPath);
+                }
+
+                // Only commit after config file is successfully written
+                if (!$conn->CommitTrans()) {
+                    throw new Exception("Failed to commit setup transaction");
+                }
+            } catch (Exception $e) {
+                $conn->RollbackTrans();
+                // Clean up config file if it was written before the error
+                if (isset($configPath) && file_exists($configPath)) {
+                    unlink($configPath);
+                }
+                throw $e;
             }
-
-            $configTemplate = file_get_contents($configPath);
-            if ($configTemplate === false) {
-                throw new Exception("Failed to read config template file: " . $configPath);
-            }
-
-            echo "<p>Config template loaded successfully</p>";
-
-            $configContent = str_replace('{{SITE_TITLE}}', $siteName, $configTemplate);
-            $configContent = str_replace('{{SITE_DESCRIPTION}}', $siteDescription, $configContent);
-            $configContent = str_replace('{{SITE_URL}}', $siteUrl, $configContent);
-            $configContent = str_replace('{{ADMIN_EMAIL}}', $adminEmail, $configContent);
-
-            echo "<p>Config content prepared</p>";
-
-            if (file_put_contents($configPath, $configContent) === false) {
-                throw new Exception("Failed to write config file: " . $configPath);
-            }
-
-            echo "<p>Config file written successfully</p>";
 
             // Installation successful
             $success = true;
         } catch (Exception $e) {
-            $errors[] = 'Installation failed: ' . $e->getMessage();
+            error_log('GreenBlog setup failed: ' . $e->__toString());
+            $errors[] = 'Installation failed. Please check the server logs or contact support.';
         }
     }
 }
@@ -316,6 +523,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button:hover {
             background-color: #1e6e2e;
         }
+        .requirements-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .requirements-table th,
+        .requirements-table td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .requirements-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .status-pass {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status-fail {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .status-warn {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .requirements-summary {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .requirements-ok {
+            color: #27ae60;
+            background-color: #d4efdf;
+        }
+        .requirements-fail {
+            color: #e74c3c;
+            background-color: #fadbd8;
+        }
     </style>
 </head>
 <body>
@@ -327,6 +574,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p><a href="admin/login.php">Click here to login</a> to your new blog.</p>
         </div>
     <?php else: ?>
+        <h2>System Requirements</h2>
+        <table class="requirements-table">
+            <thead>
+                <tr>
+                    <th>Requirement</th>
+                    <th>Required</th>
+                    <th>Current</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($requirements as $req): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($req['name']); ?></td>
+                    <td><?php echo htmlspecialchars($req['required']); ?></td>
+                    <td><?php echo htmlspecialchars($req['current']); ?></td>
+                    <td>
+                        <?php if ($req['passed']): ?>
+                            <span class="status-pass">Pass</span>
+                        <?php elseif (!empty($req['optional'])): ?>
+                            <span class="status-warn">Warning</span>
+                        <?php else: ?>
+                            <span class="status-fail">Fail</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <?php if (!$allRequiredPassed): ?>
+            <div class="requirements-summary requirements-fail">
+                <p>Some required checks have failed. Please fix the issues above before installing.</p>
+            </div>
+        <?php else: ?>
+            <div class="requirements-summary requirements-ok">
+                <p>All requirements met. You are ready to install GreenBlog.</p>
+            </div>
+        <?php endif; ?>
+
         <?php if (!empty($errors)): ?>
             <div class="error">
                 <ul>
@@ -337,6 +624,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
 
+        <?php if ($allRequiredPassed): ?>
         <form method="post" action="">
             <h2>Site Information</h2>
 
@@ -362,6 +650,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <button type="submit">Install GreenBlog</button>
         </form>
+        <?php endif; ?>
     <?php endif; ?>
 </body>
 </html>
