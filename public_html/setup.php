@@ -17,15 +17,10 @@ define('BASE_PATH', dirname(__DIR__));
 define('GREENBLOG', true);
 
 // Check if Composer dependencies are installed
-if (!file_exists(BASE_PATH . '/vendor/autoload.php')) {
-    die('<h1>Composer Dependencies Missing</h1>'
-        . '<p>Composer dependencies have not been installed. Please run the following command from the project root:</p>'
-        . '<pre>composer install</pre>'
-        . '<p>Project root: <code>' . htmlspecialchars(BASE_PATH) . '</code></p>');
-}
+$composerAutoloadExists = file_exists(BASE_PATH . '/vendor/autoload.php');
 
 // Check if already installed
-if (file_exists(BASE_PATH . '/data/greenblog.db') && file_exists(BASE_PATH . '/includes/config.php')) {
+if ($composerAutoloadExists && file_exists(BASE_PATH . '/data/greenblog.db') && file_exists(BASE_PATH . '/includes/config.php')) {
     // Check if config file indicates installation is complete
     include BASE_PATH . '/includes/config.php';
     if (defined('INSTALLED') && INSTALLED === true) {
@@ -75,12 +70,11 @@ $requirements[] = [
 ];
 
 // Composer dependencies
-$composerOk = file_exists(BASE_PATH . '/vendor/autoload.php');
 $requirements[] = [
     'name' => 'Composer Dependencies',
     'required' => 'Installed',
-    'current' => $composerOk ? 'Installed' : 'Not installed — run: composer install',
-    'passed' => $composerOk,
+    'current' => $composerAutoloadExists ? 'Installed' : 'Not installed — run: composer install',
+    'passed' => $composerAutoloadExists,
 ];
 
 // Data directory writable
@@ -90,8 +84,8 @@ $dataDirWritable = $dataDirExists && is_writable($dataDir);
 $requirements[] = [
     'name' => 'Data Directory Writable',
     'required' => 'Writable',
-    'current' => !$dataDirExists ? 'Does not exist' : ($dataDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $dataDir),
-    'passed' => $dataDirWritable,
+    'current' => !$dataDirExists ? 'Not present — will be created' : ($dataDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $dataDir),
+    'passed' => !$dataDirExists || $dataDirWritable,
 ];
 
 // Includes directory writable (config.php will be created here)
@@ -101,8 +95,8 @@ $includesDirWritable = $includesDirExists && is_writable($includesDir);
 $requirements[] = [
     'name' => 'Includes Directory Writable',
     'required' => 'Writable',
-    'current' => !$includesDirExists ? 'Does not exist' : ($includesDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $includesDir),
-    'passed' => $includesDirWritable,
+    'current' => !$includesDirExists ? 'Not present — will be created' : ($includesDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $includesDir),
+    'passed' => !$includesDirExists || $includesDirWritable,
 ];
 
 // Determine if all required checks pass
@@ -119,6 +113,12 @@ $errors = [];
 $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Server-side readiness guard: abort if required checks have not passed
+    if (!$allRequiredPassed) {
+        http_response_code(400);
+        $errors[] = 'Installation prerequisites are not met. Please resolve all failed requirements before installing.';
+    }
+
     // Validate inputs
     $siteName = trim($_POST['site_name'] ?? '');
     $siteDescription = trim($_POST['site_description'] ?? '');
@@ -209,83 +209,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception("Unable to open database: " . $conn->ErrorMsg());
             }
 
-            // Create tables
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL UNIQUE,
-                    password TEXT NOT NULL,
-                    email TEXT NOT NULL,
-                    role TEXT NOT NULL DEFAULT 'admin',
-                    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    last_login DATETIME,
-                    login_attempts INTEGER DEFAULT 0,
-                    last_login_attempt DATETIME
-                )
-            ");
+            // Helper to execute SQL with error checking
+            $execSql = function ($sql, $params = false) use ($conn) {
+                $result = $conn->Execute($sql, $params);
+                if ($result === false) {
+                    throw new Exception("SQL error: " . $conn->ErrorMsg());
+                }
+                return $result;
+            };
 
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS posts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    slug TEXT NOT NULL UNIQUE,
-                    content TEXT NOT NULL,
-                    excerpt TEXT,
-                    status TEXT NOT NULL DEFAULT 'draft',
-                    author_id INTEGER NOT NULL,
-                    featured_image TEXT,
-                    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    published_date DATETIME,
-                    FOREIGN KEY (author_id) REFERENCES users(id)
-                )
-            ");
+            // Run all DB operations inside a transaction
+            $conn->BeginTrans();
 
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS categories (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    slug TEXT NOT NULL UNIQUE,
-                    description TEXT
-                )
-            ");
+            try {
+                // Create tables
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL UNIQUE,
+                        password TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        role TEXT NOT NULL DEFAULT 'admin',
+                        created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        last_login DATETIME,
+                        login_attempts INTEGER DEFAULT 0,
+                        last_login_attempt DATETIME
+                    )
+                ");
 
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS post_categories (
-                    post_id INTEGER NOT NULL,
-                    category_id INTEGER NOT NULL,
-                    PRIMARY KEY (post_id, category_id),
-                    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-                    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
-                )
-            ");
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS posts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        slug TEXT NOT NULL UNIQUE,
+                        content TEXT NOT NULL,
+                        excerpt TEXT,
+                        status TEXT NOT NULL DEFAULT 'draft',
+                        author_id INTEGER NOT NULL,
+                        featured_image TEXT,
+                        created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        published_date DATETIME,
+                        FOREIGN KEY (author_id) REFERENCES users(id)
+                    )
+                ");
 
-            $conn->Execute("
-                CREATE TABLE IF NOT EXISTS settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
-                )
-            ");
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        slug TEXT NOT NULL UNIQUE,
+                        description TEXT
+                    )
+                ");
 
-            // Create admin user
-            $hashedPassword = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
-            $conn->Execute(
-                "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'admin')",
-                [$adminUsername, $hashedPassword, $adminEmail]
-            );
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS post_categories (
+                        post_id INTEGER NOT NULL,
+                        category_id INTEGER NOT NULL,
+                        PRIMARY KEY (post_id, category_id),
+                        FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+                    )
+                ");
 
-            // Create default category
-            $conn->Execute(
-                "INSERT INTO categories (name, slug, description) VALUES ('Uncategorized', 'uncategorized', 'Default category')"
-            );
+                $execSql("
+                    CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL
+                    )
+                ");
 
-            // Create settings
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('site_title', ?)", [$siteName]);
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('site_description', ?)", [$siteDescription]);
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('site_url', ?)", [$siteUrl]);
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('admin_email', ?)", [$adminEmail]);
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('posts_per_page', '10')");
-            $conn->Execute("INSERT INTO settings (key, value) VALUES ('excerpt_length', '150')");
+                // Create admin user
+                $hashedPassword = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+                $execSql(
+                    "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'admin')",
+                    [$adminUsername, $hashedPassword, $adminEmail]
+                );
+
+                // Create default category
+                $execSql(
+                    "INSERT INTO categories (name, slug, description) VALUES ('Uncategorized', 'uncategorized', 'Default category')"
+                );
+
+                // Create settings
+                $execSql("INSERT INTO settings (key, value) VALUES ('site_title', ?)", [$siteName]);
+                $execSql("INSERT INTO settings (key, value) VALUES ('site_description', ?)", [$siteDescription]);
+                $execSql("INSERT INTO settings (key, value) VALUES ('site_url', ?)", [$siteUrl]);
+                $execSql("INSERT INTO settings (key, value) VALUES ('admin_email', ?)", [$adminEmail]);
+                $execSql("INSERT INTO settings (key, value) VALUES ('posts_per_page', '10')");
+                $execSql("INSERT INTO settings (key, value) VALUES ('excerpt_length', '150')");
+
+                $conn->CommitTrans();
+            } catch (Exception $e) {
+                $conn->RollbackTrans();
+                throw $e;
+            }
 
             // Create config file
             $configPath = BASE_PATH . '/includes/config.php';
@@ -333,7 +352,7 @@ define('ENABLE_CACHE', true);
 define('CACHE_DURATION', 3600);
 
 // Security settings
-define('HASH_ALGO', 'PASSWORD_BCRYPT');
+define('HASH_ALGO', PASSWORD_BCRYPT);
 define('SESSION_DURATION', 3600);
 define('MAX_LOGIN_ATTEMPTS', 5);
 define('LOGIN_TIMEOUT', 300);
