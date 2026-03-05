@@ -117,6 +117,46 @@ $requirements[] = [
     'passed' => $includesDirWritable || $includesDirCreatable,
 ];
 
+// Uploads directory writable
+$uploadsDir = __DIR__ . '/uploads';
+$uploadsDirIsDir = is_dir($uploadsDir);
+$uploadsDirBlockedByFile = !$uploadsDirIsDir && file_exists($uploadsDir);
+$uploadsDirWritable = $uploadsDirIsDir && is_writable($uploadsDir);
+$uploadsDirCreatable = !file_exists($uploadsDir) && is_writable(dirname($uploadsDir));
+if ($uploadsDirBlockedByFile) {
+    $uploadsDirCurrent = 'Exists but is not a directory — remove or convert to directory';
+} elseif (!$uploadsDirIsDir) {
+    $uploadsDirCurrent = $uploadsDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($uploadsDir);
+} else {
+    $uploadsDirCurrent = $uploadsDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $uploadsDir;
+}
+$requirements[] = [
+    'name' => 'Uploads Directory Writable',
+    'required' => 'Writable',
+    'current' => $uploadsDirCurrent,
+    'passed' => $uploadsDirWritable || $uploadsDirCreatable,
+];
+
+// Static directory writable
+$staticDir = __DIR__ . '/static';
+$staticDirIsDir = is_dir($staticDir);
+$staticDirBlockedByFile = !$staticDirIsDir && file_exists($staticDir);
+$staticDirWritable = $staticDirIsDir && is_writable($staticDir);
+$staticDirCreatable = !file_exists($staticDir) && is_writable(dirname($staticDir));
+if ($staticDirBlockedByFile) {
+    $staticDirCurrent = 'Exists but is not a directory — remove or convert to directory';
+} elseif (!$staticDirIsDir) {
+    $staticDirCurrent = $staticDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($staticDir);
+} else {
+    $staticDirCurrent = $staticDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $staticDir;
+}
+$requirements[] = [
+    'name' => 'Static Directory Writable',
+    'required' => 'Writable',
+    'current' => $staticDirCurrent,
+    'passed' => $staticDirWritable || $staticDirCreatable,
+];
+
 // Determine if all required checks pass
 $allRequiredPassed = true;
 foreach ($requirements as $req) {
@@ -401,7 +441,9 @@ PHP;
                 }
 
                 // Only commit after config file is successfully written
-                $conn->CommitTrans();
+                if (!$conn->CommitTrans()) {
+                    throw new Exception("Failed to commit setup transaction");
+                }
             } catch (Exception $e) {
                 $conn->RollbackTrans();
                 // Clean up config file if it was written before the error
@@ -414,7 +456,8 @@ PHP;
             // Installation successful
             $success = true;
         } catch (Exception $e) {
-            $errors[] = 'Installation failed: ' . $e->getMessage();
+            error_log('GreenBlog setup failed: ' . $e->__toString());
+            $errors[] = 'Installation failed. Please check the server logs or contact support.';
         }
     }
 }
