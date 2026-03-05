@@ -87,9 +87,12 @@ function checkDirRequirement($path, $name) {
     $writable = $isDir && is_writable($path);
     $passed = false;
 
+    $safePath = escapeshellarg($path);
+    $safeUser = escapeshellarg($webUser);
+
     if ($blockedByFile) {
         $current = 'A file exists at this path — please remove it';
-        $fixCommands[] = 'rm ' . $path;
+        $fixCommands[] = 'rm ' . $safePath;
     } elseif (!$isDir) {
         // Directory doesn't exist — try to create it now
         if (@mkdir($path, 0755, true)) {
@@ -97,7 +100,7 @@ function checkDirRequirement($path, $name) {
             $passed = true;
         } else {
             $current = 'Could not be created automatically';
-            $fixCommands[] = 'sudo mkdir -p ' . $path . ' && sudo chown ' . $webUser . ' ' . $path;
+            $fixCommands[] = 'sudo mkdir -p ' . $safePath . ' && sudo chown ' . $safeUser . ' ' . $safePath;
         }
     } else {
         if ($writable) {
@@ -105,7 +108,7 @@ function checkDirRequirement($path, $name) {
             $passed = true;
         } else {
             $current = 'Not writable';
-            $fixCommands[] = 'sudo chown ' . $webUser . ' ' . $path;
+            $fixCommands[] = 'sudo chown ' . $safeUser . ' ' . $safePath;
         }
     }
 
