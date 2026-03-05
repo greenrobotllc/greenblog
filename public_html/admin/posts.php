@@ -233,19 +233,19 @@ function displayNewPostForm() {
         </div>
     </form>
     
-    <!-- Include TinyMCE -->
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <!-- Include TinyMCE (self-hosted) -->
+    <script src="../assets/js/tinymce/js/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
     <script>
         tinymce.init({
             selector: '.wysiwyg-editor',
             height: 500,
             menubar: false,
             plugins: [
-                'advlist autolink lists link image charmap print preview anchor',
+                'advlist autolink lists link image charmap preview anchor',
                 'searchreplace visualblocks code fullscreen',
-                'insertdatetime media table paste code help wordcount'
+                'insertdatetime media table help wordcount'
             ],
-            toolbar: 'undo redo | formatselect | ' +
+            toolbar: 'undo redo | blocks | ' +
                 'bold italic backcolor | alignleft aligncenter ' +
                 'alignright alignjustify | bullist numlist outdent indent | ' +
                 'removeformat | help',
@@ -345,19 +345,19 @@ function displayEditPostForm() {
         </div>
     </form>
     
-    <!-- Include TinyMCE -->
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <!-- Include TinyMCE (self-hosted) -->
+    <script src="../assets/js/tinymce/js/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
     <script>
         tinymce.init({
             selector: '.wysiwyg-editor',
             height: 500,
             menubar: false,
             plugins: [
-                'advlist autolink lists link image charmap print preview anchor',
+                'advlist autolink lists link image charmap preview anchor',
                 'searchreplace visualblocks code fullscreen',
-                'insertdatetime media table paste code help wordcount'
+                'insertdatetime media table help wordcount'
             ],
-            toolbar: 'undo redo | formatselect | ' +
+            toolbar: 'undo redo | blocks | ' +
                 'bold italic backcolor | alignleft aligncenter ' +
                 'alignright alignjustify | bullist numlist outdent indent | ' +
                 'removeformat | help',
