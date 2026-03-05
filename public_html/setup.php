@@ -77,85 +77,50 @@ $requirements[] = [
     'passed' => $composerAutoloadExists,
 ];
 
-// Data directory writable
-$dataDir = BASE_PATH . '/data';
-$dataDirIsDir = is_dir($dataDir);
-$dataDirBlockedByFile = !$dataDirIsDir && file_exists($dataDir);
-$dataDirWritable = $dataDirIsDir && is_writable($dataDir);
-$dataDirCreatable = !file_exists($dataDir) && is_writable(dirname($dataDir));
-if ($dataDirBlockedByFile) {
-    $dataDirCurrent = 'Exists but is not a directory — remove or convert to directory';
-} elseif (!$dataDirIsDir) {
-    $dataDirCurrent = $dataDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($dataDir);
-} else {
-    $dataDirCurrent = $dataDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $dataDir;
-}
-$requirements[] = [
-    'name' => 'Data Directory Writable',
-    'required' => 'Writable',
-    'current' => $dataDirCurrent,
-    'passed' => $dataDirWritable || $dataDirCreatable,
-];
+// Helper to check a directory's writability/creatability for the requirements table
+$webUser = function_exists('posix_getpwuid') ? (posix_getpwuid(posix_geteuid())['name'] ?? 'web server') : 'web server';
+$fixCommands = [];
+function checkDirRequirement($path, $name) {
+    global $webUser, $fixCommands;
+    $isDir = is_dir($path);
+    $blockedByFile = !$isDir && file_exists($path);
+    $writable = $isDir && is_writable($path);
+    $passed = false;
 
-// Includes directory writable (config.php will be created here)
-$includesDir = BASE_PATH . '/includes';
-$includesDirIsDir = is_dir($includesDir);
-$includesDirBlockedByFile = !$includesDirIsDir && file_exists($includesDir);
-$includesDirWritable = $includesDirIsDir && is_writable($includesDir);
-$includesDirCreatable = !file_exists($includesDir) && is_writable(dirname($includesDir));
-if ($includesDirBlockedByFile) {
-    $includesDirCurrent = 'Exists but is not a directory — remove or convert to directory';
-} elseif (!$includesDirIsDir) {
-    $includesDirCurrent = $includesDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($includesDir);
-} else {
-    $includesDirCurrent = $includesDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $includesDir;
-}
-$requirements[] = [
-    'name' => 'Includes Directory Writable',
-    'required' => 'Writable',
-    'current' => $includesDirCurrent,
-    'passed' => $includesDirWritable || $includesDirCreatable,
-];
+    if ($blockedByFile) {
+        $current = 'A file exists at this path — please remove it';
+        $fixCommands[] = 'rm ' . $path;
+    } elseif (!$isDir) {
+        // Directory doesn't exist — try to create it now
+        if (@mkdir($path, 0755, true)) {
+            $current = 'Created successfully';
+            $passed = true;
+        } else {
+            $current = 'Could not be created automatically';
+            $fixCommands[] = 'sudo mkdir -p ' . $path . ' && sudo chown ' . $webUser . ' ' . $path;
+        }
+    } else {
+        if ($writable) {
+            $current = 'Writable';
+            $passed = true;
+        } else {
+            $current = 'Not writable';
+            $fixCommands[] = 'sudo chown ' . $webUser . ' ' . $path;
+        }
+    }
 
-// Uploads directory writable
-$uploadsDir = __DIR__ . '/uploads';
-$uploadsDirIsDir = is_dir($uploadsDir);
-$uploadsDirBlockedByFile = !$uploadsDirIsDir && file_exists($uploadsDir);
-$uploadsDirWritable = $uploadsDirIsDir && is_writable($uploadsDir);
-$uploadsDirCreatable = !file_exists($uploadsDir) && is_writable(dirname($uploadsDir));
-if ($uploadsDirBlockedByFile) {
-    $uploadsDirCurrent = 'Exists but is not a directory — remove or convert to directory';
-} elseif (!$uploadsDirIsDir) {
-    $uploadsDirCurrent = $uploadsDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($uploadsDir);
-} else {
-    $uploadsDirCurrent = $uploadsDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $uploadsDir;
+    return [
+        'name' => $name,
+        'required' => 'Writable',
+        'current' => $current,
+        'passed' => $passed,
+    ];
 }
-$requirements[] = [
-    'name' => 'Uploads Directory Writable',
-    'required' => 'Writable',
-    'current' => $uploadsDirCurrent,
-    'passed' => $uploadsDirWritable || $uploadsDirCreatable,
-];
 
-// Static directory writable
-$staticDir = __DIR__ . '/static';
-$staticDirIsDir = is_dir($staticDir);
-$staticDirBlockedByFile = !$staticDirIsDir && file_exists($staticDir);
-$staticDirWritable = $staticDirIsDir && is_writable($staticDir);
-$staticDirCreatable = !file_exists($staticDir) && is_writable(dirname($staticDir));
-if ($staticDirBlockedByFile) {
-    $staticDirCurrent = 'Exists but is not a directory — remove or convert to directory';
-} elseif (!$staticDirIsDir) {
-    $staticDirCurrent = $staticDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($staticDir);
-} else {
-    $staticDirCurrent = $staticDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $staticDir;
-}
-$requirements[] = [
-    'name' => 'Static Directory Writable',
-    'required' => 'Writable',
-    'current' => $staticDirCurrent,
-    'passed' => $staticDirWritable || $staticDirCreatable,
-];
+$requirements[] = checkDirRequirement(BASE_PATH . '/data', 'Data Directory Writable');
+$requirements[] = checkDirRequirement(BASE_PATH . '/includes', 'Includes Directory Writable');
+$requirements[] = checkDirRequirement(__DIR__ . '/uploads', 'Uploads Directory Writable');
+$requirements[] = checkDirRequirement(__DIR__ . '/static', 'Static Directory Writable');
 
 // Determine if all required checks pass
 $allRequiredPassed = true;
@@ -545,10 +510,7 @@ PHP;
         .status-fail {
             color: #e74c3c;
             font-weight: bold;
-        }
-        .status-warn {
-            color: #f39c12;
-            font-weight: bold;
+            white-space: nowrap;
         }
         .requirements-summary {
             padding: 10px;
@@ -593,10 +555,8 @@ PHP;
                     <td>
                         <?php if ($req['passed']): ?>
                             <span class="status-pass">Pass</span>
-                        <?php elseif (!empty($req['optional'])): ?>
-                            <span class="status-warn">Warning</span>
                         <?php else: ?>
-                            <span class="status-fail">Fail</span>
+                            <span class="status-fail">Action Required</span>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -606,7 +566,38 @@ PHP;
 
         <?php if (!$allRequiredPassed): ?>
             <div class="requirements-summary requirements-fail">
-                <p>Some required checks have failed. Please fix the issues above before installing.</p>
+                <p>Some checks need attention. Run this command in your terminal, then refresh the page:</p>
+                <?php if (!empty($fixCommands)): ?>
+                <?php $fixCommand = implode(" && \\\n", $fixCommands); ?>
+                <div style="position:relative;margin-top:8px">
+                    <pre id="fix-command" style="background:#2d2d2d;color:#f8f8f2;padding:12px 50px 12px 12px;border-radius:4px;overflow-x:auto;font-size:13px;margin:0"><?php echo htmlspecialchars($fixCommand); ?></pre>
+                    <button onclick="copyFixCommand()" id="copy-btn" style="position:absolute;top:8px;right:8px;background:#555;color:#fff;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:12px">Copy</button>
+                </div>
+                <script>
+                function copyFixCommand() {
+                    var text = document.getElementById('fix-command').textContent;
+                    var btn = document.getElementById('copy-btn');
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(onCopied);
+                    } else {
+                        var ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.opacity = '0';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        onCopied();
+                    }
+                    function onCopied() {
+                        btn.textContent = 'Copied!';
+                        btn.style.background = '#27ae60';
+                        setTimeout(function() { btn.textContent = 'Copy'; btn.style.background = '#555'; }, 2000);
+                    }
+                }
+                </script>
+                <?php endif; ?>
             </div>
         <?php else: ?>
             <div class="requirements-summary requirements-ok">
@@ -643,7 +634,7 @@ PHP;
             <input type="text" id="admin_username" name="admin_username" value="<?php echo htmlspecialchars($_POST['admin_username'] ?? ''); ?>" required>
 
             <label for="admin_password">Password:</label>
-            <input type="password" id="admin_password" name="admin_password" required>
+            <input type="password" id="admin_password" name="admin_password" autocomplete="new-password" required>
 
             <label for="admin_email">Email:</label>
             <input type="email" id="admin_email" name="admin_email" value="<?php echo htmlspecialchars($_POST['admin_email'] ?? ''); ?>" required>
