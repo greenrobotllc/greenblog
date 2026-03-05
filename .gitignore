@@ -9,13 +9,11 @@
 # Uncomment the line below if you want to exclude the config file after setup
 # /includes/config.php
 
-# User uploads
-/public_html/uploads/*
-!/public_html/uploads/.gitkeep
+# User uploads (created by installer)
+/public_html/uploads/
 
-# Generated static files
-/public_html/static/*
-!/public_html/static/.gitkeep
+# Generated static files (created by installer)
+/public_html/static/
 
 # Logs
 /logs/
