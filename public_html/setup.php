@@ -81,22 +81,34 @@ $requirements[] = [
 $dataDir = BASE_PATH . '/data';
 $dataDirExists = file_exists($dataDir);
 $dataDirWritable = $dataDirExists && is_writable($dataDir);
+$dataDirCreatable = !$dataDirExists && is_writable(dirname($dataDir));
+if (!$dataDirExists) {
+    $dataDirCurrent = $dataDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($dataDir);
+} else {
+    $dataDirCurrent = $dataDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $dataDir;
+}
 $requirements[] = [
     'name' => 'Data Directory Writable',
     'required' => 'Writable',
-    'current' => !$dataDirExists ? 'Not present — will be created' : ($dataDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $dataDir),
-    'passed' => !$dataDirExists || $dataDirWritable,
+    'current' => $dataDirCurrent,
+    'passed' => $dataDirWritable || $dataDirCreatable,
 ];
 
 // Includes directory writable (config.php will be created here)
 $includesDir = BASE_PATH . '/includes';
 $includesDirExists = file_exists($includesDir);
 $includesDirWritable = $includesDirExists && is_writable($includesDir);
+$includesDirCreatable = !$includesDirExists && is_writable(dirname($includesDir));
+if (!$includesDirExists) {
+    $includesDirCurrent = $includesDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($includesDir);
+} else {
+    $includesDirCurrent = $includesDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $includesDir;
+}
 $requirements[] = [
     'name' => 'Includes Directory Writable',
     'required' => 'Writable',
-    'current' => !$includesDirExists ? 'Not present — will be created' : ($includesDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $includesDir),
-    'passed' => !$includesDirExists || $includesDirWritable,
+    'current' => $includesDirCurrent,
+    'passed' => $includesDirWritable || $includesDirCreatable,
 ];
 
 // Determine if all required checks pass
@@ -306,8 +318,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw $e;
             }
 
+            // Ensure includes directory exists
+            $includesPath = BASE_PATH . '/includes';
+            if (!is_dir($includesPath)) {
+                if (!mkdir($includesPath, 0755, true)) {
+                    throw new Exception("Failed to create includes directory: " . $includesPath);
+                }
+            }
+
             // Create config file
-            $configPath = BASE_PATH . '/includes/config.php';
+            $configPath = $includesPath . '/config.php';
             $escapedSiteTitle = addslashes($siteName);
             $escapedSiteDesc = addslashes($siteDescription);
             $escapedSiteUrl = addslashes($siteUrl);
