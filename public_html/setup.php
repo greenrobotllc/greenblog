@@ -79,10 +79,13 @@ $requirements[] = [
 
 // Data directory writable
 $dataDir = BASE_PATH . '/data';
-$dataDirExists = file_exists($dataDir);
-$dataDirWritable = $dataDirExists && is_writable($dataDir);
-$dataDirCreatable = !$dataDirExists && is_writable(dirname($dataDir));
-if (!$dataDirExists) {
+$dataDirIsDir = is_dir($dataDir);
+$dataDirBlockedByFile = !$dataDirIsDir && file_exists($dataDir);
+$dataDirWritable = $dataDirIsDir && is_writable($dataDir);
+$dataDirCreatable = !file_exists($dataDir) && is_writable(dirname($dataDir));
+if ($dataDirBlockedByFile) {
+    $dataDirCurrent = 'Exists but is not a directory — remove or convert to directory';
+} elseif (!$dataDirIsDir) {
     $dataDirCurrent = $dataDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($dataDir);
 } else {
     $dataDirCurrent = $dataDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $dataDir;
@@ -96,10 +99,13 @@ $requirements[] = [
 
 // Includes directory writable (config.php will be created here)
 $includesDir = BASE_PATH . '/includes';
-$includesDirExists = file_exists($includesDir);
-$includesDirWritable = $includesDirExists && is_writable($includesDir);
-$includesDirCreatable = !$includesDirExists && is_writable(dirname($includesDir));
-if (!$includesDirExists) {
+$includesDirIsDir = is_dir($includesDir);
+$includesDirBlockedByFile = !$includesDirIsDir && file_exists($includesDir);
+$includesDirWritable = $includesDirIsDir && is_writable($includesDir);
+$includesDirCreatable = !file_exists($includesDir) && is_writable(dirname($includesDir));
+if ($includesDirBlockedByFile) {
+    $includesDirCurrent = 'Exists but is not a directory — remove or convert to directory';
+} elseif (!$includesDirIsDir) {
     $includesDirCurrent = $includesDirCreatable ? 'Not present — will be created' : 'Not present — parent not writable: run chmod 775 ' . dirname($includesDir);
 } else {
     $includesDirCurrent = $includesDirWritable ? 'Writable' : 'Not writable — run: chmod 775 ' . $includesDir;
