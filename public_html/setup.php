@@ -182,28 +182,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         try {
             // Create data directory if it doesn't exist
-            if (!file_exists(BASE_PATH . '/data')) {
-                if (!mkdir(BASE_PATH . '/data', 0755, true)) {
-                    throw new Exception("Failed to create data directory: " . BASE_PATH . '/data');
+            $dataPath = BASE_PATH . '/data';
+            if (file_exists($dataPath) && !is_dir($dataPath)) {
+                throw new Exception("Path exists but is not a directory: " . $dataPath);
+            }
+            if (!is_dir($dataPath)) {
+                if (!mkdir($dataPath, 0755, true)) {
+                    throw new Exception("Failed to create data directory: " . $dataPath);
                 }
             }
 
             // Ensure data directory is writable
-            if (!is_writable(BASE_PATH . '/data')) {
-                throw new Exception("Data directory is not writable: " . BASE_PATH . '/data' . ". Please run: chmod 775 " . BASE_PATH . '/data');
+            if (!is_writable($dataPath)) {
+                throw new Exception("Data directory is not writable: " . $dataPath . ". Please run: chmod 775 " . $dataPath);
             }
 
             // Create uploads directory if it doesn't exist
-            if (!file_exists(__DIR__ . '/uploads')) {
-                if (!mkdir(__DIR__ . '/uploads', 0755, true)) {
-                    throw new Exception("Failed to create uploads directory: " . __DIR__ . '/uploads');
+            $uploadsPath = __DIR__ . '/uploads';
+            if (file_exists($uploadsPath) && !is_dir($uploadsPath)) {
+                throw new Exception("Path exists but is not a directory: " . $uploadsPath);
+            }
+            if (!is_dir($uploadsPath)) {
+                if (!mkdir($uploadsPath, 0755, true)) {
+                    throw new Exception("Failed to create uploads directory: " . $uploadsPath);
                 }
             }
 
             // Create static directory if it doesn't exist
-            if (!file_exists(__DIR__ . '/static')) {
-                if (!mkdir(__DIR__ . '/static', 0755, true)) {
-                    throw new Exception("Failed to create static directory: " . __DIR__ . '/static');
+            $staticPath = __DIR__ . '/static';
+            if (file_exists($staticPath) && !is_dir($staticPath)) {
+                throw new Exception("Path exists but is not a directory: " . $staticPath);
+            }
+            if (!is_dir($staticPath)) {
+                if (!mkdir($staticPath, 0755, true)) {
+                    throw new Exception("Failed to create static directory: " . $staticPath);
                 }
             }
 
@@ -318,28 +330,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $execSql("INSERT INTO settings (key, value) VALUES ('posts_per_page', '10')");
                 $execSql("INSERT INTO settings (key, value) VALUES ('excerpt_length', '150')");
 
-                $conn->CommitTrans();
-            } catch (Exception $e) {
-                $conn->RollbackTrans();
-                throw $e;
-            }
-
-            // Ensure includes directory exists
-            $includesPath = BASE_PATH . '/includes';
-            if (!is_dir($includesPath)) {
-                if (!mkdir($includesPath, 0755, true)) {
-                    throw new Exception("Failed to create includes directory: " . $includesPath);
+                // Ensure includes directory exists
+                $includesPath = BASE_PATH . '/includes';
+                if (!is_dir($includesPath)) {
+                    if (!mkdir($includesPath, 0755, true)) {
+                        throw new Exception("Failed to create includes directory: " . $includesPath);
+                    }
                 }
-            }
 
-            // Create config file
-            $configPath = $includesPath . '/config.php';
-            $escapedSiteTitle = addslashes($siteName);
-            $escapedSiteDesc = addslashes($siteDescription);
-            $escapedSiteUrl = addslashes($siteUrl);
-            $escapedAdminEmail = addslashes($adminEmail);
+                // Create config file
+                $configPath = $includesPath . '/config.php';
+                $escapedSiteTitle = addslashes($siteName);
+                $escapedSiteDesc = addslashes($siteDescription);
+                $escapedSiteUrl = addslashes($siteUrl);
+                $escapedAdminEmail = addslashes($adminEmail);
 
-            $configContent = <<<PHP
+                $configContent = <<<PHP
 <?php
 /**
  * GreenBlog Configuration File
@@ -390,8 +396,19 @@ define('INSTALLED', true);
 define('VERSION', '1.0.0');
 PHP;
 
-            if (file_put_contents($configPath, $configContent) === false) {
-                throw new Exception("Failed to write config file: " . $configPath);
+                if (file_put_contents($configPath, $configContent) === false) {
+                    throw new Exception("Failed to write config file: " . $configPath);
+                }
+
+                // Only commit after config file is successfully written
+                $conn->CommitTrans();
+            } catch (Exception $e) {
+                $conn->RollbackTrans();
+                // Clean up config file if it was written before the error
+                if (isset($configPath) && file_exists($configPath)) {
+                    unlink($configPath);
+                }
+                throw $e;
             }
 
             // Installation successful
