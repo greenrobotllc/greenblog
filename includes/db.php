@@ -123,7 +123,16 @@ function insertRecord($table, $data) {
 function updateRecord($table, $data, $where, $params = []) {
     $conn = getDbConnection();
     try {
-        return $conn->AutoExecute($table, $data, 'UPDATE', $where, $params);
+        $setClauses = [];
+        $queryParams = [];
+        foreach ($data as $column => $value) {
+            $setClauses[] = "$column = ?";
+            $queryParams[] = $value;
+        }
+        $sql = "UPDATE $table SET " . implode(', ', $setClauses) . " WHERE $where";
+        $queryParams = array_merge($queryParams, $params);
+        $result = $conn->Execute($sql, $queryParams);
+        return $result !== false;
     } catch (Exception $e) {
         error_log('Update Error: ' . $e->getMessage());
         return false;
