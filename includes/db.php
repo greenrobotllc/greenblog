@@ -111,6 +111,18 @@ function insertRecord($table, $data) {
     }
 }
 
+function validateIdentifier($identifier) {
+    return (bool) preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $identifier);
+}
+
+function validateWhereClause($where) {
+    return (bool) preg_match('/^[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?(\s+AND\s+[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?)*$/i', $where);
+}
+
+function validatePlaceholders($where, $params) {
+    return substr_count($where, '?') === count($params);
+}
+
 /**
  * Update a record in the database
  *
@@ -121,9 +133,42 @@ function insertRecord($table, $data) {
  * @return bool Success or failure
  */
 function updateRecord($table, $data, $where, $params = []) {
+    if (empty($data)) {
+        error_log('Update Error: $data array is empty');
+        return false;
+    }
+
+    if (!validateIdentifier($table)) {
+        error_log('Update Error: Invalid table name');
+        return false;
+    }
+
+    if (!validateWhereClause($where)) {
+        error_log('Update Error: Invalid WHERE clause format');
+        return false;
+    }
+
+    if (!validatePlaceholders($where, $params)) {
+        error_log('Update Error: WHERE placeholder count (' . substr_count($where, '?') . ') does not match params count (' . count($params) . ')');
+        return false;
+    }
+
     $conn = getDbConnection();
     try {
-        return $conn->AutoExecute($table, $data, 'UPDATE', $where, $params);
+        $setClauses = [];
+        $queryParams = [];
+        foreach ($data as $column => $value) {
+            if (!validateIdentifier($column)) {
+                error_log('Update Error: Invalid column name');
+                return false;
+            }
+            $setClauses[] = "$column = ?";
+            $queryParams[] = $value;
+        }
+        $sql = "UPDATE $table SET " . implode(', ', $setClauses) . " WHERE $where";
+        $queryParams = array_merge($queryParams, $params);
+        $result = $conn->Execute($sql, $queryParams);
+        return $result !== false;
     } catch (Exception $e) {
         error_log('Update Error: ' . $e->getMessage());
         return false;
@@ -139,9 +184,25 @@ function updateRecord($table, $data, $where, $params = []) {
  * @return bool Success or failure
  */
 function deleteRecord($table, $where, $params = []) {
+    if (!validateIdentifier($table)) {
+        error_log('Delete Error: Invalid table name');
+        return false;
+    }
+
+    if (!validateWhereClause($where)) {
+        error_log('Delete Error: Invalid WHERE clause format');
+        return false;
+    }
+
+    if (!validatePlaceholders($where, $params)) {
+        error_log('Delete Error: WHERE placeholder count (' . substr_count($where, '?') . ') does not match params count (' . count($params) . ')');
+        return false;
+    }
+
     $conn = getDbConnection();
     try {
-        return $conn->Execute("DELETE FROM $table WHERE $where", $params);
+        $result = $conn->Execute("DELETE FROM $table WHERE $where", $params);
+        return $result !== false;
     } catch (Exception $e) {
         error_log('Delete Error: ' . $e->getMessage());
         return false;
