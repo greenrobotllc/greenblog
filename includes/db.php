@@ -126,9 +126,15 @@ function updateRecord($table, $data, $where, $params = []) {
         return false;
     }
 
-    $identifierPattern = '/^[a-zA-Z0-9_]+$/';
+    $identifierPattern = '/^[A-Za-z_][A-Za-z0-9_]*$/';
     if (!preg_match($identifierPattern, $table)) {
         error_log('Update Error: Invalid table name');
+        return false;
+    }
+
+    $wherePattern = '/^\w+\s*(?:=|!=|<>|<|>|<=|>=)\s*\?(\s+AND\s+\w+\s*(?:=|!=|<>|<|>|<=|>=)\s*\?)*$/i';
+    if (!preg_match($wherePattern, $where)) {
+        error_log('Update Error: Invalid WHERE clause format');
         return false;
     }
 
