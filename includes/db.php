@@ -132,7 +132,7 @@ function updateRecord($table, $data, $where, $params = []) {
         return false;
     }
 
-    $wherePattern = '/^\w+\s*(?:=|!=|<>|<|>|<=|>=)\s*\?(\s+AND\s+\w+\s*(?:=|!=|<>|<|>|<=|>=)\s*\?)*$/i';
+    $wherePattern = '/^[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?(\s+AND\s+[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?)*$/i';
     if (!preg_match($wherePattern, $where)) {
         error_log('Update Error: Invalid WHERE clause format');
         return false;
@@ -169,6 +169,18 @@ function updateRecord($table, $data, $where, $params = []) {
  * @return bool Success or failure
  */
 function deleteRecord($table, $where, $params = []) {
+    $identifierPattern = '/^[A-Za-z_][A-Za-z0-9_]*$/';
+    if (!preg_match($identifierPattern, $table)) {
+        error_log('Delete Error: Invalid table name');
+        return false;
+    }
+
+    $wherePattern = '/^[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?(\s+AND\s+[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?)*$/i';
+    if (!preg_match($wherePattern, $where)) {
+        error_log('Delete Error: Invalid WHERE clause format');
+        return false;
+    }
+
     $conn = getDbConnection();
     try {
         return $conn->Execute("DELETE FROM $table WHERE $where", $params);
