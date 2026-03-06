@@ -1,0 +1,10 @@
+{
+  "name": "greenblog-ci",
+  "private": true,
+  "description": "CI dependencies for GreenBlog",
+  "devDependencies": {
+    "html-validate": "^8.0.0",
+    "pa11y-ci": "^3.1.0",
+    "puppeteer": "^22.0.0"
+  }
+}
