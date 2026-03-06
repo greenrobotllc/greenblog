@@ -1,12 +1,13 @@
 FROM php:7.4-apache
 
 # Install dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
     libsqlite3-dev \
     zip \
     unzip \
-    && docker-php-ext-install zip pdo_mysql pdo_sqlite
+    && docker-php-ext-install zip pdo_mysql pdo_sqlite \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -26,7 +27,7 @@ RUN a2enmod rewrite
 # Create and set permissions on writable directories
 RUN mkdir -p /var/www/data /var/www/public_html/static /var/www/public_html/uploads
 RUN chown -R www-data:www-data /var/www/data /var/www/public_html/static /var/www/public_html/uploads
-RUN chmod -R 755 /var/www/data /var/www/public_html/static /var/www/public_html/uploads
+RUN chmod -R 700 /var/www/data && chmod -R 755 /var/www/public_html/static /var/www/public_html/uploads
 
 # Install dependencies
 RUN cd /var/www && composer install

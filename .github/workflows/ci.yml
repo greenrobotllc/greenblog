@@ -36,14 +36,20 @@ jobs:
 
       - name: Wait for server to be ready
         run: |
+          READY=0
           for i in $(seq 1 30); do
             if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/setup.php | grep -q "200"; then
               echo "Server is ready"
+              READY=1
               break
             fi
             echo "Waiting for server... attempt $i"
             sleep 2
           done
+          if [ "$READY" -ne 1 ]; then
+            echo "ERROR: Server at http://localhost:8080/setup.php did not become ready within 60 seconds"
+            exit 1
+          fi
 
       - name: Setup blog with test data
         run: bash scripts/ci-setup.sh http://localhost:8080
@@ -80,7 +86,7 @@ jobs:
         run: |
           docker compose cp web:/var/www/public_html/static ./static-output
           mkdir -p static-output/admin
-          curl -s http://localhost:8080/admin/login.php -o static-output/admin/login.html
+          curl -fsS http://localhost:8080/admin/login.php -o static-output/admin/login.html
           npx html-validate "static-output/**/*.html"
 
       - name: Check for browser console errors

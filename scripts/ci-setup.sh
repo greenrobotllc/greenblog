@@ -98,6 +98,7 @@ else
     if [ "$LOGIN_HTTP2" != "302" ]; then
       echo "Login still failing"
       echo "$LOGIN_RESULT2" | sed '$d' | grep -i "error\|invalid" | head -5
+      exit 1
     fi
   elif echo "$LOGIN_BODY" | grep -q "Invalid username"; then
     echo "Wrong credentials!"
@@ -150,8 +151,9 @@ echo "Create post response: HTTP $CREATE_HTTP"
 if [ "$CREATE_HTTP" = "302" ] || [ "$CREATE_HTTP" = "200" ]; then
   echo "Post created successfully."
 else
-  echo "Post creation may have failed."
+  echo "Post creation failed (HTTP $CREATE_HTTP):"
   echo "$CREATE_RESULT" | sed '$d' | head -5
+  exit 1
 fi
 
 # Step 6: Verify static files were generated
@@ -175,5 +177,10 @@ fi
 
 POST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/static/hello-world/")
 echo "Hello World post status: $POST_STATUS"
+
+if [ "$POST_STATUS" != "200" ]; then
+  echo "ERROR: Static post page not available at $BASE_URL/static/hello-world/ (HTTP $POST_STATUS)"
+  exit 1
+fi
 
 echo "=== CI Setup complete ==="

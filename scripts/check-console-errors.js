@@ -19,47 +19,48 @@ if (urls.length === 0) {
 
   let totalErrors = 0;
 
-  for (const url of urls) {
-    const page = await browser.newPage();
-    const errors = [];
+  try {
+    for (const url of urls) {
+      const page = await browser.newPage();
+      const errors = [];
 
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    page.on('pageerror', (err) => {
-      errors.push(err.message);
-    });
-
-    page.on('requestfailed', (request) => {
-      errors.push(`Request failed: ${request.url()} - ${request.failure().errorText}`);
-    });
-
-    try {
-      await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
-    } catch (err) {
-      console.error(`${url} - FAILED TO LOAD: ${err.message}`);
-      totalErrors++;
-      await page.close();
-      continue;
-    }
-
-    await page.close();
-
-    if (errors.length > 0) {
-      console.error(`${url} - ${errors.length} error(s):`);
-      errors.forEach((error, i) => {
-        console.error(`  ${i + 1}. ${error}`);
+      page.on('console', (msg) => {
+        if (msg.type() === 'error') {
+          errors.push(msg.text());
+        }
       });
-      totalErrors += errors.length;
-    } else {
-      console.log(`${url} - no errors`);
-    }
-  }
 
-  await browser.close();
+      page.on('pageerror', (err) => {
+        errors.push(err.message);
+      });
+
+      page.on('requestfailed', (request) => {
+        errors.push(`Request failed: ${request.url()} - ${request.failure().errorText}`);
+      });
+
+      try {
+        await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+      } catch (err) {
+        console.error(`${url} - FAILED TO LOAD: ${err.message}`);
+        totalErrors++;
+        continue;
+      } finally {
+        await page.close();
+      }
+
+      if (errors.length > 0) {
+        console.error(`${url} - ${errors.length} error(s):`);
+        errors.forEach((error, i) => {
+          console.error(`  ${i + 1}. ${error}`);
+        });
+        totalErrors += errors.length;
+      } else {
+        console.log(`${url} - no errors`);
+      }
+    }
+  } finally {
+    await browser.close();
+  }
 
   if (totalErrors > 0) {
     console.error(`\nTotal: ${totalErrors} console error(s) across ${urls.length} URL(s)`);
