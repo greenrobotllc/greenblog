@@ -121,11 +121,26 @@ function insertRecord($table, $data) {
  * @return bool Success or failure
  */
 function updateRecord($table, $data, $where, $params = []) {
+    if (empty($data)) {
+        error_log('Update Error: $data array is empty');
+        return false;
+    }
+
+    $identifierPattern = '/^[a-zA-Z0-9_]+$/';
+    if (!preg_match($identifierPattern, $table)) {
+        error_log('Update Error: Invalid table name');
+        return false;
+    }
+
     $conn = getDbConnection();
     try {
         $setClauses = [];
         $queryParams = [];
         foreach ($data as $column => $value) {
+            if (!preg_match($identifierPattern, $column)) {
+                error_log('Update Error: Invalid column name');
+                return false;
+            }
             $setClauses[] = "$column = ?";
             $queryParams[] = $value;
         }
