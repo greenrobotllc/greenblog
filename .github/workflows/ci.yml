@@ -25,10 +25,12 @@ jobs:
           docker compose up -d --build
           sleep 5
 
-      - name: Ensure clean install
+      - name: Ensure clean install and fix permissions
         run: |
           docker compose exec -T -u root web rm -f /var/www/data/greenblog.db /var/www/includes/config.php
           docker compose exec -T -u root web bash -c "rm -rf /var/www/public_html/static/* 2>/dev/null || true"
+          docker compose exec -T -u root web bash -c "chown -R www-data:www-data /var/www/data /var/www/includes /var/www/public_html/static /var/www/public_html/uploads 2>/dev/null || true"
+          docker compose exec -T -u root web bash -c "chmod -R 755 /var/www/data /var/www/includes /var/www/public_html/static /var/www/public_html/uploads 2>/dev/null || true"
 
       - name: Wait for server to be ready
         run: |
