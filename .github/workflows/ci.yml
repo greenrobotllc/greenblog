@@ -30,6 +30,7 @@ jobs:
           docker compose exec -T -u root web rm -f /var/www/data/greenblog.db /var/www/includes/config.php
           docker compose exec -T -u root web bash -c "rm -rf /var/www/public_html/static/* 2>/dev/null || true"
           docker compose exec -T -u root web composer install --working-dir=/var/www
+          docker compose exec -T -u root web mkdir -p /var/www/data /var/www/public_html/static /var/www/public_html/uploads
           docker compose exec -T -u root web chown -R www-data:www-data /var/www/data /var/www/includes /var/www/public_html/static /var/www/public_html/uploads /var/www/vendor
           docker compose exec -T -u root web chmod -R 755 /var/www/data /var/www/includes /var/www/public_html/static /var/www/public_html/uploads
 
