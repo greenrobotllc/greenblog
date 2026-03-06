@@ -87,8 +87,6 @@ else
     : > "$COOKIE_JAR"
     LOGIN_PAGE2=$(curl -s -c "$COOKIE_JAR" "$BASE_URL/admin/login.php")
     LOGIN_CSRF2=$(echo "$LOGIN_PAGE2" | grep -o 'name="csrf_token" value="[^"]*"' | head -1 | sed 's/.*value="//;s/"//')
-    echo "Cookies after GET:"
-    cat "$COOKIE_JAR"
     LOGIN_RESULT2=$(curl -s -w "\n%{http_code}" -c "$COOKIE_JAR" -b "$COOKIE_JAR" -X POST "$BASE_URL/admin/login.php" \
       -d "csrf_token=$LOGIN_CSRF2" \
       -d "username=admin" \
