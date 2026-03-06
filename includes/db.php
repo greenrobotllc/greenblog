@@ -111,6 +111,18 @@ function insertRecord($table, $data) {
     }
 }
 
+function validateIdentifier($identifier) {
+    return (bool) preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $identifier);
+}
+
+function validateWhereClause($where) {
+    return (bool) preg_match('/^[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?(\s+AND\s+[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?)*$/i', $where);
+}
+
+function validatePlaceholders($where, $params) {
+    return substr_count($where, '?') === count($params);
+}
+
 /**
  * Update a record in the database
  *
@@ -126,21 +138,18 @@ function updateRecord($table, $data, $where, $params = []) {
         return false;
     }
 
-    $identifierPattern = '/^[A-Za-z_][A-Za-z0-9_]*$/';
-    if (!preg_match($identifierPattern, $table)) {
+    if (!validateIdentifier($table)) {
         error_log('Update Error: Invalid table name');
         return false;
     }
 
-    $wherePattern = '/^[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?(\s+AND\s+[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?)*$/i';
-    if (!preg_match($wherePattern, $where)) {
+    if (!validateWhereClause($where)) {
         error_log('Update Error: Invalid WHERE clause format');
         return false;
     }
 
-    $placeholderCount = substr_count($where, '?');
-    if ($placeholderCount !== count($params)) {
-        error_log('Update Error: WHERE placeholder count (' . $placeholderCount . ') does not match params count (' . count($params) . ')');
+    if (!validatePlaceholders($where, $params)) {
+        error_log('Update Error: WHERE placeholder count (' . substr_count($where, '?') . ') does not match params count (' . count($params) . ')');
         return false;
     }
 
@@ -149,7 +158,7 @@ function updateRecord($table, $data, $where, $params = []) {
         $setClauses = [];
         $queryParams = [];
         foreach ($data as $column => $value) {
-            if (!preg_match($identifierPattern, $column)) {
+            if (!validateIdentifier($column)) {
                 error_log('Update Error: Invalid column name');
                 return false;
             }
@@ -175,21 +184,18 @@ function updateRecord($table, $data, $where, $params = []) {
  * @return bool Success or failure
  */
 function deleteRecord($table, $where, $params = []) {
-    $identifierPattern = '/^[A-Za-z_][A-Za-z0-9_]*$/';
-    if (!preg_match($identifierPattern, $table)) {
+    if (!validateIdentifier($table)) {
         error_log('Delete Error: Invalid table name');
         return false;
     }
 
-    $wherePattern = '/^[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?(\s+AND\s+[A-Za-z_][A-Za-z0-9_]*\s*(?:=|!=|<>|<|>|<=|>=)\s*\?)*$/i';
-    if (!preg_match($wherePattern, $where)) {
+    if (!validateWhereClause($where)) {
         error_log('Delete Error: Invalid WHERE clause format');
         return false;
     }
 
-    $placeholderCount = substr_count($where, '?');
-    if ($placeholderCount !== count($params)) {
-        error_log('Delete Error: WHERE placeholder count (' . $placeholderCount . ') does not match params count (' . count($params) . ')');
+    if (!validatePlaceholders($where, $params)) {
+        error_log('Delete Error: WHERE placeholder count (' . substr_count($where, '?') . ') does not match params count (' . count($params) . ')');
         return false;
     }
 
