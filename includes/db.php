@@ -138,6 +138,12 @@ function updateRecord($table, $data, $where, $params = []) {
         return false;
     }
 
+    $placeholderCount = substr_count($where, '?');
+    if ($placeholderCount !== count($params)) {
+        error_log('Update Error: WHERE placeholder count (' . $placeholderCount . ') does not match params count (' . count($params) . ')');
+        return false;
+    }
+
     $conn = getDbConnection();
     try {
         $setClauses = [];
@@ -181,9 +187,16 @@ function deleteRecord($table, $where, $params = []) {
         return false;
     }
 
+    $placeholderCount = substr_count($where, '?');
+    if ($placeholderCount !== count($params)) {
+        error_log('Delete Error: WHERE placeholder count (' . $placeholderCount . ') does not match params count (' . count($params) . ')');
+        return false;
+    }
+
     $conn = getDbConnection();
     try {
-        return $conn->Execute("DELETE FROM $table WHERE $where", $params);
+        $result = $conn->Execute("DELETE FROM $table WHERE $where", $params);
+        return $result !== false;
     } catch (Exception $e) {
         error_log('Delete Error: ' . $e->getMessage());
         return false;
