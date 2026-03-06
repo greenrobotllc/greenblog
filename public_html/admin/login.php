@@ -61,6 +61,10 @@ $csrfToken = generateCsrfToken();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - <?php echo htmlspecialchars(SITE_TITLE); ?> Admin</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -72,7 +76,7 @@ $csrfToken = generateCsrfToken();
             background-color: #f9f9f9;
         }
         h1 {
-            color: #2c8c3c;
+            color: #217b30;
             text-align: center;
             margin-bottom: 30px;
         }
@@ -100,7 +104,7 @@ $csrfToken = generateCsrfToken();
             box-sizing: border-box;
         }
         button {
-            background-color: #2c8c3c;
+            background-color: #217b30;
             color: white;
             border: none;
             padding: 10px 15px;
@@ -117,7 +121,7 @@ $csrfToken = generateCsrfToken();
             margin-top: 20px;
         }
         .back-link a {
-            color: #2c8c3c;
+            color: #217b30;
             text-decoration: none;
         }
         .back-link a:hover {
@@ -132,7 +136,7 @@ $csrfToken = generateCsrfToken();
         <div class="error"><?php echo htmlspecialchars($error); ?></div>
     <?php endif; ?>
     
-    <form method="post" action="">
+    <form method="post">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
         
         <div class="form-group">

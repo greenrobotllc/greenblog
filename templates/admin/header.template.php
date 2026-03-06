@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) . ' - ' : ''; ?><?php echo htmlspecialchars(SITE_TITLE); ?> Admin</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
     <style>
         /* Reset and base styles */
         * {
@@ -20,7 +24,7 @@
         }
         
         a {
-            color: #2c8c3c;
+            color: #217b30;
             text-decoration: none;
         }
         
@@ -36,7 +40,7 @@
         
         .sidebar {
             width: 250px;
-            background-color: #2c8c3c;
+            background-color: #217b30;
             color: white;
             padding: 20px;
         }
@@ -116,7 +120,7 @@
         
         .stat-card h2 {
             font-size: 36px;
-            color: #2c8c3c;
+            color: #217b30;
             margin-bottom: 5px;
         }
         
@@ -205,7 +209,7 @@
         
         .button {
             display: inline-block;
-            background-color: #2c8c3c;
+            background-color: #217b30;
             color: white;
             padding: 10px 15px;
             border: none;
@@ -279,9 +283,9 @@
         }
         
         .pagination .current {
-            background-color: #2c8c3c;
+            background-color: #217b30;
             color: white;
-            border-color: #2c8c3c;
+            border-color: #217b30;
         }
     </style>
 </head>

@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  accessibility-and-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean previous state
+        run: |
+          rm -f data/greenblog.db
+          rm -f includes/config.php
+          rm -rf public_html/static/*
+
+      - name: Build and start Docker container
+        run: |
+          docker compose up -d --build
+          sleep 5
+
+      - name: Ensure clean install
+        run: |
+          docker compose exec -T -u root web rm -f /var/www/data/greenblog.db /var/www/includes/config.php
+          docker compose exec -T -u root web bash -c "rm -rf /var/www/public_html/static/* 2>/dev/null || true"
+
+      - name: Wait for server to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/setup.php | grep -q "200"; then
+              echo "Server is ready"
+              break
+            fi
+            echo "Waiting for server... attempt $i"
+            sleep 2
+          done
+
+      - name: Setup blog with test data
+        run: bash scripts/ci-setup.sh http://localhost:8080
+
+      - name: Verify static files exist
+        run: |
+          curl -f http://localhost:8080/static/ || (echo "Static homepage not accessible" && exit 1)
+          echo "Generated static files:"
+          docker compose exec -T web find /var/www/public_html/static -type f | sort
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Chromium system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 libnspr4 libatk1.0-0t64 libatk-bridge2.0-0t64 \
+            libcups2t64 libdrm2 libxkbcommon0 libxcomposite1 \
+            libxdamage1 libxfixes3 libxrandr2 libgbm1 \
+            libpango-1.0-0 libcairo2 libasound2t64 libxshmfence1 \
+            libgtk-3-0t64 libx11-xcb1 \
+            fonts-liberation xdg-utils
+
+      - name: Install CI dependencies
+        run: npm ci
+
+      - name: Run pa11y accessibility tests
+        run: npx pa11y-ci --config .pa11yci.json
+
+      - name: Run HTML validation
+        run: |
+          docker compose cp web:/var/www/public_html/static ./static-output
+          mkdir -p static-output/admin
+          curl -s http://localhost:8080/admin/login.php -o static-output/admin/login.html
+          npx html-validate "static-output/**/*.html"
+
+      - name: Check for browser console errors
+        run: |
+          node scripts/check-console-errors.js \
+            http://localhost:8080/static/ \
+            http://localhost:8080/static/hello-world/ \
+            http://localhost:8080/static/category/uncategorized/ \
+            http://localhost:8080/admin/login.php
+
+      - name: Stop Docker container
+        if: always()
+        run: docker compose down

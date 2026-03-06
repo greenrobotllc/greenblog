@@ -15,7 +15,7 @@ body {
 }
 
 a {
-    color: #2c8c3c;
+    color: #217b30;
     text-decoration: none;
 }
 
@@ -49,7 +49,7 @@ img {
 }
 
 .site-title h1 a {
-    color: #2c8c3c;
+    color: #217b30;
     text-decoration: none;
 }
 
@@ -94,7 +94,7 @@ img {
 
 .page-title {
     font-size: 32px;
-    color: #2c8c3c;
+    color: #217b30;
 }
 
 .category-description {
@@ -149,7 +149,7 @@ img {
 
 .post-read-more a {
     display: inline-block;
-    background-color: #2c8c3c;
+    background-color: #217b30;
     color: white;
     padding: 8px 15px;
     border-radius: 3px;
@@ -176,7 +176,7 @@ img {
 
 .post-header .post-title {
     font-size: 36px;
-    color: #2c8c3c;
+    color: #217b30;
     padding: 0;
 }
 
@@ -201,7 +201,7 @@ img {
 .post-content h3,
 .post-content h4 {
     margin: 30px 0 15px;
-    color: #2c8c3c;
+    color: #217b30;
 }
 
 .post-content img {
@@ -272,9 +272,9 @@ img {
 }
 
 .pagination .current {
-    background-color: #2c8c3c;
+    background-color: #217b30;
     color: white;
-    border-color: #2c8c3c;
+    border-color: #217b30;
 }
 
 /* Archive */
@@ -283,7 +283,7 @@ img {
 }
 
 .archive-month h2 {
-    color: #2c8c3c;
+    color: #217b30;
     margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 1px solid #eee;

@@ -1,0 +1,16 @@
+{
+  "defaults": {
+    "standard": "WCAG2AA",
+    "timeout": 10000,
+    "wait": 1000,
+    "chromeLaunchConfig": {
+      "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+    }
+  },
+  "urls": [
+    "http://localhost:8080/static/",
+    "http://localhost:8080/static/hello-world/",
+    "http://localhost:8080/static/category/uncategorized/",
+    "http://localhost:8080/admin/login.php"
+  ]
+}

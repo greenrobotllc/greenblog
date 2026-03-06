@@ -3,12 +3,10 @@ FROM php:7.4-apache
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     libzip-dev \
+    libsqlite3-dev \
     zip \
     unzip \
-    && docker-php-ext-install zip pdo_mysql
-
-# Enable SQLite
-RUN docker-php-ext-install pdo_sqlite
+    && docker-php-ext-install zip pdo_mysql pdo_sqlite
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -25,7 +23,8 @@ RUN sed -i 's/\/var\/www\/html/\/var\/www\/public_html/g' /etc/apache2/sites-ava
 # Enable mod_rewrite
 RUN a2enmod rewrite
 
-# Set permissions
+# Create and set permissions on writable directories
+RUN mkdir -p /var/www/data /var/www/public_html/static /var/www/public_html/uploads
 RUN chown -R www-data:www-data /var/www/data /var/www/public_html/static /var/www/public_html/uploads
 RUN chmod -R 755 /var/www/data /var/www/public_html/static /var/www/public_html/uploads
 

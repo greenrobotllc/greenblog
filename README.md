@@ -182,6 +182,25 @@ For production environments:
 - Regularly backup your database and uploaded content
 - Consider using a more robust database like MySQL for high-traffic sites
 
+## Password Reset
+
+If you forget your admin password, you can reset it directly via the SQLite database:
+
+1. Generate a new bcrypt hash:
+   ```
+   php -r "echo password_hash('your-new-password', PASSWORD_BCRYPT, ['cost' => 12]);"
+   ```
+
+2. Update the database:
+   ```
+   sqlite3 data/greenblog.db "UPDATE users SET password='PASTE_HASH_HERE', login_attempts=0 WHERE username='admin';"
+   ```
+
+Alternatively, you can do a fresh install by removing the database and config file, then visiting `/setup.php`:
+```
+rm data/greenblog.db includes/config.php
+```
+
 ## Troubleshooting
 
 ### SQLite Issues
