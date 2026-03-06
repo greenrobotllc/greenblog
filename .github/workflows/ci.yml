@@ -9,6 +9,7 @@ on:
 jobs:
   accessibility-and-validation:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -96,6 +97,10 @@ jobs:
             http://localhost:8080/static/hello-world/ \
             http://localhost:8080/static/category/uncategorized/ \
             http://localhost:8080/admin/login.php
+
+      - name: Dump Docker logs on failure
+        if: failure()
+        run: docker compose logs --tail=50
 
       - name: Stop Docker container
         if: always()

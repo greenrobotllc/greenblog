@@ -54,7 +54,7 @@ fi
 # Step 2: GET the login page to obtain a session cookie and CSRF token
 echo "Getting login page..."
 # Clear cookie jar for fresh session
-> "$COOKIE_JAR"
+: > "$COOKIE_JAR"
 LOGIN_PAGE=$(curl -s -c "$COOKIE_JAR" "$BASE_URL/admin/login.php")
 LOGIN_CSRF=$(echo "$LOGIN_PAGE" | grep -o 'name="csrf_token" value="[^"]*"' | head -1 | sed 's/.*value="//;s/"//')
 
@@ -84,7 +84,7 @@ else
   LOGIN_BODY=$(echo "$LOGIN_RESULT" | sed '$d')
   if echo "$LOGIN_BODY" | grep -q "Invalid form submission"; then
     echo "CSRF token mismatch - retrying with fresh session..."
-    > "$COOKIE_JAR"
+    : > "$COOKIE_JAR"
     LOGIN_PAGE2=$(curl -s -c "$COOKIE_JAR" "$BASE_URL/admin/login.php")
     LOGIN_CSRF2=$(echo "$LOGIN_PAGE2" | grep -o 'name="csrf_token" value="[^"]*"' | head -1 | sed 's/.*value="//;s/"//')
     echo "Cookies after GET:"
