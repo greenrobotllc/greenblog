@@ -13,6 +13,19 @@ trap cleanup EXIT
 
 echo "=== Setting up GreenBlog at $BASE_URL ==="
 
+# Step 0: GET setup.php first to check requirements
+echo "Checking setup requirements..."
+SETUP_GET=$(curl -s "$BASE_URL/setup.php")
+if echo "$SETUP_GET" | grep -q "already installed"; then
+  echo "Already installed, continuing..."
+elif echo "$SETUP_GET" | grep -q "Action Required"; then
+  echo "ERROR: Setup requirements not met:"
+  echo "$SETUP_GET" | grep -oP '(?<=<td>)[^<]+' | paste - - - - | head -20
+  exit 1
+else
+  echo "Requirements OK, proceeding with install..."
+fi
+
 # Step 1: Run the installer via POST to setup.php
 echo "Running installer..."
 SETUP_RESPONSE=$(curl -s -w "\n%{http_code}" -c "$COOKIE_JAR" -X POST "$BASE_URL/setup.php" \
@@ -32,7 +45,9 @@ elif echo "$SETUP_BODY" | grep -q "already installed"; then
   echo "Already installed, continuing..."
 else
   echo "Setup failed (HTTP $SETUP_HTTP_CODE):"
-  echo "$SETUP_BODY" | head -20
+  echo "$SETUP_BODY" | grep -oP '(?<=<td>)[^<]+' | paste - - - - | head -20
+  echo "---"
+  echo "$SETUP_BODY" | grep -i "error\|fail\|not met\|prerequisites" | head -5
   exit 1
 fi
 
