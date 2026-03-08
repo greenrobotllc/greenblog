@@ -37,9 +37,12 @@ GreenBlog is a lightweight, secure, and fast blogging platform that serves as a 
    Make sure the following directories are writable by the web server:
 
    ```bash
-   chmod -R 755 data
-   chmod -R 755 public_html/static
-   chmod -R 755 public_html/uploads
+   find data -type d -exec chmod 755 {} \;
+   find data -type f -exec chmod 644 {} \;
+   find public_html/static -type d -exec chmod 755 {} \;
+   find public_html/static -type f -exec chmod 644 {} \;
+   find public_html/uploads -type d -exec chmod 755 {} \;
+   find public_html/uploads -type f -exec chmod 644 {} \;
    ```
 
 4. **Configure your web server**
@@ -197,7 +200,7 @@ If you forget your admin password, you can reset it directly via the SQLite data
 2. Update the database:
 
    ```bash
-   sqlite3 data/greenblog.db "UPDATE users SET password='PASTE_HASH_HERE', login_attempts=0 WHERE username='admin';"
+   sqlite3 data/greenblog.db 'UPDATE users SET password='\''PASTE_HASH_HERE'\'', login_attempts=0 WHERE username='\''admin'\'';'
    ```
 
 Alternatively, you can do a fresh install by removing the database and config file, then visiting `/setup.php`:
