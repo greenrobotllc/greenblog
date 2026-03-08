@@ -21,14 +21,14 @@ GreenBlog is a lightweight, secure, and fast blogging platform that serves as a 
 
 1. **Download or clone the repository**
 
-   ```
+   ```bash
    git clone https://github.com/yourusername/greenblog.git
    cd greenblog
    ```
 
 2. **Install dependencies using Composer**
 
-   ```
+   ```bash
    composer install
    ```
 
@@ -36,10 +36,13 @@ GreenBlog is a lightweight, secure, and fast blogging platform that serves as a 
 
    Make sure the following directories are writable by the web server:
 
-   ```
-   chmod -R 755 data
-   chmod -R 755 public_html/static
-   chmod -R 755 public_html/uploads
+   ```bash
+   find data -type d -exec chmod 755 {} \;
+   find data -type f -exec chmod 644 {} \;
+   find public_html/static -type d -exec chmod 755 {} \;
+   find public_html/static -type f -exec chmod 644 {} \;
+   find public_html/uploads -type d -exec chmod 755 {} \;
+   find public_html/uploads -type f -exec chmod 644 {} \;
    ```
 
 4. **Configure your web server**
@@ -65,12 +68,14 @@ For local development, you can use PHP's built-in web server to serve the public
 GreenBlog comes with scripts to easily start the development server:
 
 1. **Using Batch Script**:
-   ```
+
+   ```batch
    scripts\start-server.bat
    ```
 
 2. **Using PowerShell Script**:
-   ```
+
+   ```powershell
    scripts\start-server.ps1
    ```
 
@@ -83,14 +88,14 @@ These scripts will:
 
 You can also start the server manually:
 
-```
+```bash
 cd /path/to/greenblog
 php -S localhost:8000 -t public_html
 ```
 
 If you encounter permission errors, make sure you're using the correct syntax with the `-t` flag:
 
-```
+```bash
 # INCORRECT (causes permission errors):
 php -S localhost:8000 public_html
 
@@ -182,6 +187,34 @@ For production environments:
 - Regularly backup your database and uploaded content
 - Consider using a more robust database like MySQL for high-traffic sites
 
+## Password Reset
+
+If you forget your admin password, you can reset it directly via the SQLite database:
+
+1. Generate a new bcrypt hash:
+
+   ```bash
+   php -r "echo password_hash('your-new-password', PASSWORD_BCRYPT, ['cost' => 12]);"
+   ```
+
+2. Update the database:
+
+   ```bash
+   sqlite3 data/greenblog.db 'UPDATE users SET password='\''PASTE_HASH_HERE'\'', login_attempts=0 WHERE username='\''admin'\'';'
+   ```
+
+Alternatively, you can do a fresh install by removing the database and config file, then visiting `/setup.php`:
+
+```bash
+rm data/greenblog.db includes/config.php
+```
+
+On Windows:
+
+```batch
+del data\greenblog.db includes\config.php
+```
+
 ## Troubleshooting
 
 ### SQLite Issues
@@ -199,7 +232,8 @@ If you encounter errors related to SQLite functions like `sqlite_query()`, it me
 If you see the error "SQLite3 extension is not loaded", follow these steps to enable it:
 
 1. Locate your php.ini file:
-   ```
+
+   ```bash
    php --ini
    ```
 
@@ -208,14 +242,16 @@ If you see the error "SQLite3 extension is not loaded", follow these steps to en
 3. Find the line with `;extension=sqlite3` (it has a semicolon at the beginning)
 
 4. Remove the semicolon to uncomment the line:
-   ```
+
+   ```ini
    extension=sqlite3
    ```
 
 5. Save the file and restart your web server or PHP process
 
 6. Verify the extension is loaded:
-   ```
+
+   ```batch
    php -m | findstr sqlite
    ```
    You should see "sqlite3" in the output
@@ -224,7 +260,7 @@ If you see the error "SQLite3 extension is not loaded", follow these steps to en
 
 If you get permission errors when using PHP's built-in server, make sure you're using the correct syntax with the `-t` flag:
 
-```
+```bash
 # CORRECT:
 php -S localhost:8000 -t public_html
 ```

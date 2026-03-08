@@ -40,6 +40,9 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 
+# Node.js dependencies
+/node_modules/
+
 # Composer dependencies
 /vendor/
 
